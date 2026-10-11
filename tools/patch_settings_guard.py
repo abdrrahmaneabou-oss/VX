@@ -77,45 +77,49 @@ def patch_file(path: Path) -> None:
     if not new_array_match:
         raise RuntimeError("Could not locate blocked-label String array")
 
-    # Start at the const instruction immediately preceding new-array.
     before_array = body[:new_array_match.start()]
-    start_match = list(re.finditer(r"(?m)^\s*const(?:/4|/16)? v0, 0x[0-9a-fA-F]+\s*$", before_array))
-    if not start_match:
+    start_matches = list(re.finditer(
+        r"(?m)^\s*const(?:/4|/16)? v0, 0x[0-9a-fA-F]+\s*$",
+        before_array,
+    ))
+    if not start_matches:
         raise RuntimeError("Could not locate array-size const instruction")
-    block_start = start_match[-1].start()
+    block_start = start_matches[-1].start()
 
-    # Stop immediately before the Kotlin setOf(...) call. The original method
-    # then stores the resulting Set in blockedLabels and initializes $stable.
-    setof_match = re.search(
-        r"(?m)^\s*invoke-static \{v0\}, Lkotlin/collections/SetsKt[^;]*;->setOf\(\[Ljava/lang/Object;\)Ljava/util/Set;\s*$",
+    # Find the field assignment that ultimately stores the Set. We do not
+    # depend on the exact Kotlin helper used (setOf, toSet, SetsKt variants).
+    blocked_field = re.search(
+        r"(?m)^\s*sput-object\s+v\d+,\s*" + re.escape(TARGET_CLASS) +
+        r"->blockedLabels:Ljava/util/Set;\s*$",
         body[new_array_match.end():],
     )
-    if not setof_match:
-        # Apktool/smali versions can emit SetsKt or SetsKt__SetsKt.
-        setof_match = re.search(
-            r"(?m)^\s*invoke-static \{v0\}, Lkotlin/collections/[^;]+;->setOf\(\[Ljava/lang/Object;\)Ljava/util/Set;\s*$",
-            body[new_array_match.end():],
-        )
-    if not setof_match:
-        raise RuntimeError("Could not locate setOf(...) call after blocked-label array")
-    block_end = new_array_match.end() + setof_match.start()
+    if not blocked_field:
+        raise RuntimeError("Could not locate blockedLabels field assignment")
 
-    patched_body = body[:block_start] + build_array_block() + "\n" + body[block_end:]
+    field_start = new_array_match.end() + blocked_field.start()
+    population_region = body[new_array_match.end():field_start]
+    aputs = list(re.finditer(r"(?m)^\s*aput-object\s+[^\n]+$", population_region))
+    if not aputs:
+        raise RuntimeError("Could not locate array population instructions")
+
+    # Replace only the array construction/population. Preserve the original
+    # Kotlin conversion instructions between the last aput-object and sput-object.
+    block_end = new_array_match.end() + aputs[-1].end()
+
+    patched_body = body[:block_start] + build_array_block() + body[block_end:]
     patched_method = ".method static constructor <clinit>()V\n" + patched_body + ".end method"
     patched_text = text[:method_match.start()] + patched_method + text[method_match.end():]
 
-    # Safety assertions: removed labels must not remain in the guarded array
-    # source, and all requested labels must be present.
     for removed in ("Private DNS", "Reset network settings", "Rest app preferences"):
         if f'const-string v2, "{removed}"' in patched_method:
-            raise RuntimeError(f"Removed label still present: {removed}")
+            raise RuntimeError(f"Removed label still present in guarded array: {removed}")
     for required in LABELS:
         if f'const-string v2, "{smali_quote(required)}"' not in patched_method:
             raise RuntimeError(f"Required label missing: {required}")
 
     path.write_text(patched_text, encoding="utf-8")
     print(f"Patched {path}")
-    print("Blocked labels:")
+    print(f"Blocked label count: {len(LABELS)}")
     for label in LABELS:
         print(f"  - {label}")
 
