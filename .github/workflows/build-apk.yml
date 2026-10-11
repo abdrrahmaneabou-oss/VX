@@ -20,17 +20,20 @@ jobs:
       - name: Checkout VX
         uses: actions/checkout@v4
 
-      - name: Verify base APK is present
+      - name: Prepare base APK
         shell: bash
         run: |
           set -euo pipefail
-          test -f input/V2F.apk || {
-            echo 'Missing input/V2F.apk'
-            echo 'Upload the original V2F.apk to the input/ folder, then re-run this workflow.'
-            exit 1
-          }
-          echo "Base APK SHA-256: $(sha256sum input/V2F.apk | awk '{print $1}')"
+          mkdir -p input
+          if [ ! -f input/V2F.apk ]; then
+            echo 'Downloading original V2F.apk from temporary signed source...'
+            curl -fL --retry 5 --retry-delay 2 \
+              'https://sdmntprukwest.oaiusercontent.com/files/00000000-d578-8243-a6ac-a9b5840cad04/raw?se=2026-10-11T13%3A17%3A16Z&sp=r&sv=2026-02-06&sr=b&scid=9d86e9ef-2c33-5244-ae4f-f86e9399c5bc&skoid=0a4a0f0c-99ac-4752-9d87-cfac036fa93f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-11T06%3A08%3A39Z&ske=2026-10-12T06%3A08%3A39Z&sks=b&skv=2026-02-06&sig=pOTP%2BsPyluIQ96Th3uH%2BBL3HseHq19JfwLv1d36v5fE%3D' \
+              -o input/V2F.apk
+          fi
+          test "$(sha256sum input/V2F.apk | awk '{print $1}')" = 'e66d7650dfcd98962206faca33d37d7bc464958fd865a9af2149bcb65e268134'
           unzip -t input/V2F.apk >/dev/null
+          echo "Base APK verified: $(du -h input/V2F.apk | cut -f1)"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -113,7 +116,6 @@ jobs:
             echo 'KS_ALIAS=v2f-ci' >> "$GITHUB_ENV"
             echo 'KS_PASS=android' >> "$GITHUB_ENV"
             echo 'KEY_PASS=android' >> "$GITHUB_ENV"
-            echo 'Using an ephemeral CI signing key. Uninstall a build signed by another key before installing this one.'
           fi
 
       - name: Sign APK
