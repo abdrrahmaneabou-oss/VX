@@ -1,0 +1,149 @@
+name: Build patched V2F APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'input/V2F.apk'
+      - 'tools/patch_settings_guard.py'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout VX
+        uses: actions/checkout@v4
+
+      - name: Verify base APK is present
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f input/V2F.apk || {
+            echo 'Missing input/V2F.apk'
+            echo 'Upload the original V2F.apk to the input/ folder, then re-run this workflow.'
+            exit 1
+          }
+          echo "Base APK SHA-256: $(sha256sum input/V2F.apk | awk '{print $1}')"
+          unzip -t input/V2F.apk >/dev/null
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download Apktool
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/tools
+          curl -fL --retry 3 \
+            -o build/tools/apktool.jar \
+            https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
+          java -jar build/tools/apktool.jar --version
+
+      - name: Decode APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build/decompiled
+          java -jar build/tools/apktool.jar d -f input/V2F.apk -o build/decompiled
+
+      - name: Patch SettingsClickGuardConfig
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/patch_settings_guard.py build/decompiled
+
+      - name: Rebuild APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -jar build/tools/apktool.jar b build/decompiled -o build/V2F-unsigned.apk
+          unzip -t build/V2F-unsigned.apk >/dev/null
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'build-tools;35.0.0'
+          echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_ENV"
+
+      - name: Zipalign APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$BUILD_TOOLS/zipalign" -f -p 4 build/V2F-unsigned.apk build/V2F-aligned.apk
+          "$BUILD_TOOLS/zipalign" -c -v 4 build/V2F-aligned.apk
+
+      - name: Prepare signing key
+        shell: bash
+        env:
+          APK_KEYSTORE_B64: ${{ secrets.APK_KEYSTORE_B64 }}
+          APK_KEY_ALIAS: ${{ secrets.APK_KEY_ALIAS }}
+          APK_KEYSTORE_PASSWORD: ${{ secrets.APK_KEYSTORE_PASSWORD }}
+          APK_KEY_PASSWORD: ${{ secrets.APK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "${APK_KEYSTORE_B64:-}" ]; then
+            printf '%s' "$APK_KEYSTORE_B64" | base64 -d > build/signing.jks
+            echo "KS_ALIAS=${APK_KEY_ALIAS:?Set APK_KEY_ALIAS secret}" >> "$GITHUB_ENV"
+            echo "KS_PASS=${APK_KEYSTORE_PASSWORD:?Set APK_KEYSTORE_PASSWORD secret}" >> "$GITHUB_ENV"
+            echo "KEY_PASS=${APK_KEY_PASSWORD:?Set APK_KEY_PASSWORD secret}" >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -v \
+              -keystore build/signing.jks \
+              -storepass android \
+              -keypass android \
+              -alias v2f-ci \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname 'CN=V2F CI,O=VX,C=US'
+            echo 'KS_ALIAS=v2f-ci' >> "$GITHUB_ENV"
+            echo 'KS_PASS=android' >> "$GITHUB_ENV"
+            echo 'KEY_PASS=android' >> "$GITHUB_ENV"
+            echo 'Using an ephemeral CI signing key. Uninstall a build signed by another key before installing this one.'
+          fi
+
+      - name: Sign APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks build/signing.jks \
+            --ks-key-alias "$KS_ALIAS" \
+            --ks-pass "pass:$KS_PASS" \
+            --key-pass "pass:$KEY_PASS" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out build/V2F-patched.apk \
+            build/V2F-aligned.apk
+
+      - name: Verify final APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -t build/V2F-patched.apk >/dev/null
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs build/V2F-patched.apk
+          "$BUILD_TOOLS/zipalign" -c -v 4 build/V2F-patched.apk
+          sha256sum build/V2F-patched.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: V2F-patched
+          path: build/V2F-patched.apk
+          if-no-files-found: error
+          retention-days: 30
