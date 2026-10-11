@@ -26,9 +26,6 @@ def main() -> int:
     path = candidates[0]
     text = path.read_text(encoding="utf-8")
 
-    # Kotlin/Smali normally emits the 24-hour interval as a hex literal.
-    # Accept either the hexadecimal or decimal representation, but patch
-    # exactly one occurrence inside BreakRules so unrelated constants remain untouched.
     patterns = [
         (re.compile(rf"(?i)(?<![0-9a-f]){re.escape(OLD_HEX)}(?![0-9a-f])"), NEW_HEX),
         (re.compile(rf"(?<!\d){OLD_MS}(?!\d)"), str(NEW_MS)),
@@ -40,9 +37,9 @@ def main() -> int:
         patched, count = pattern.subn(replacement, patched)
         total += count
 
-    if total != 1:
+    if total != 2:
         raise RuntimeError(
-            f"Expected exactly one 24-hour interval constant in BreakRules, replaced {total}"
+            f"Expected exactly two 24-hour interval references in BreakRules, replaced {total}"
         )
 
     if OLD_HEX.lower() in patched.lower() or str(OLD_MS) in patched:
@@ -53,6 +50,7 @@ def main() -> int:
     path.write_text(patched, encoding="utf-8")
     print(f"Patched {path}")
     print(f"Break interval: {OLD_MS} ms -> {NEW_MS} ms (24h -> 12h)")
+    print(f"Updated references: {total}")
     return 0
 
 
