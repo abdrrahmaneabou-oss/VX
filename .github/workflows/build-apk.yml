@@ -6,6 +6,7 @@ on:
     paths:
       - 'input/V2F.apk'
       - 'tools/patch_settings_guard.py'
+      - 'tools/patch_break_interval.py'
       - '.github/workflows/build-apk.yml'
 
 permissions:
@@ -63,6 +64,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/patch_settings_guard.py build/decompiled
+
+      - name: Patch automatic break interval to 12 hours
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/patch_break_interval.py build/decompiled
 
       - name: Rebuild APK
         shell: bash
