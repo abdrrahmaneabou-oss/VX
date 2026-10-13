@@ -51,16 +51,26 @@ public final class DynamicLabelsActivity extends Activity {
         root.addView(reset, new LinearLayout.LayoutParams(-1, -2));
 
         save.setOnClickListener(v -> {
-            LinkedHashSet<String> values = parse(editor.getText().toString());
-            DynamicLabelsStore.save(this, values);
-            editor.setText(join(values));
-            Toast.makeText(this, "تم حفظ القائمة", Toast.LENGTH_SHORT).show();
+            try {
+                LinkedHashSet<String> values = parse(editor.getText().toString());
+                DynamicLabelsStore.save(this, values);
+                editor.setText(join(values));
+                editor.setSelection(editor.length());
+                Toast.makeText(this, "تم حفظ القائمة وتفعيلها", Toast.LENGTH_SHORT).show();
+            } catch (Throwable error) {
+                Toast.makeText(this, "تعذر حفظ القائمة: " + safeMessage(error), Toast.LENGTH_LONG).show();
+            }
         });
 
         reset.setOnClickListener(v -> {
-            DynamicLabelsStore.reset(this);
-            editor.setText(join(DynamicLabelsStore.load(this)));
-            Toast.makeText(this, "تمت استعادة القائمة الافتراضية", Toast.LENGTH_SHORT).show();
+            try {
+                DynamicLabelsStore.reset(this);
+                editor.setText(join(DynamicLabelsStore.load(this)));
+                editor.setSelection(editor.length());
+                Toast.makeText(this, "تمت استعادة القائمة الافتراضية", Toast.LENGTH_SHORT).show();
+            } catch (Throwable error) {
+                Toast.makeText(this, "تعذر استعادة القائمة: " + safeMessage(error), Toast.LENGTH_LONG).show();
+            }
         });
 
         setContentView(root);
@@ -82,6 +92,11 @@ public final class DynamicLabelsActivity extends Activity {
             out.append(value);
         }
         return out.toString();
+    }
+
+    private String safeMessage(Throwable error) {
+        String message = error == null ? null : error.getMessage();
+        return TextUtils.isEmpty(message) ? "خطأ غير معروف" : message;
     }
 
     private int dp(int value) {
