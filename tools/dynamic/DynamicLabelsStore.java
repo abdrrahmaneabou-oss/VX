@@ -3,9 +3,8 @@ package com.v1f.app.patch;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.v1f.app.protection.modules.settings.SettingsClickGuardConfig;
-
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -21,6 +20,7 @@ public final class DynamicLabelsStore {
             "Uninstall",
             "DEACTIVATE & UNINSTALL",
             "Reset app preferences",
+            "Reset app preferences?",
             "Background running",
             "V1F App Guard",
             "V1F Device Protection",
@@ -35,6 +35,15 @@ public final class DynamicLabelsStore {
             "Restore Applications"
     };
 
+    /*
+     * Keep our own live set instead of mutating SettingsClickGuardConfig's
+     * Kotlin set. Some builds expose that set as immutable; calling clear()/
+     * addAll() on it caused the editor to crash and also left protection using
+     * stale values. The original getter is patched at build time to read this
+     * store instead.
+     */
+    private static volatile Set<String> current = immutableCopy(defaults());
+
     private DynamicLabelsStore() {}
 
     public static LinkedHashSet<String> defaults() {
@@ -42,34 +51,51 @@ public final class DynamicLabelsStore {
     }
 
     public static LinkedHashSet<String> load(Context context) {
+        if (context == null) return defaults();
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         if (!prefs.contains(KEY)) return defaults();
         Set<String> stored = prefs.getStringSet(KEY, null);
-        return stored == null ? defaults() : new LinkedHashSet<>(stored);
+        return sanitize(stored == null ? defaults() : stored);
     }
 
     public static void init(Context context) {
         try {
-            apply(load(context));
+            current = immutableCopy(load(context));
         } catch (Throwable ignored) {
-            // Never let the optional editor bring down the app at startup.
+            current = immutableCopy(defaults());
         }
     }
 
     public static void save(Context context, Set<String> labels) {
-        LinkedHashSet<String> copy = new LinkedHashSet<>(labels);
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().putStringSet(KEY, copy).apply();
-        apply(copy);
+        LinkedHashSet<String> copy = sanitize(labels);
+        if (context != null) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .edit().putStringSet(KEY, new LinkedHashSet<>(copy)).apply();
+        }
+        current = immutableCopy(copy);
     }
 
     public static void reset(Context context) {
         save(context, defaults());
     }
 
-    private static void apply(Set<String> labels) {
-        Set<String> live = SettingsClickGuardConfig.INSTANCE.getBlockedLabels();
-        live.clear();
-        live.addAll(labels);
+    /** Returns a stable snapshot used by both the original and robust guards. */
+    public static Set<String> snapshot() {
+        return current;
+    }
+
+    private static LinkedHashSet<String> sanitize(Iterable<String> labels) {
+        LinkedHashSet<String> out = new LinkedHashSet<>();
+        if (labels == null) return out;
+        for (String label : labels) {
+            if (label == null) continue;
+            String value = label.trim();
+            if (!value.isEmpty()) out.add(value);
+        }
+        return out;
+    }
+
+    private static Set<String> immutableCopy(Set<String> labels) {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(labels));
     }
 }
