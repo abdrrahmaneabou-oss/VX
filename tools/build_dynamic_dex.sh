@@ -28,7 +28,12 @@ if [ "${#CLASSES[@]}" -eq 0 ]; then
   exit 1
 fi
 
-"$BUILD_TOOLS/d8" --min-api 23 --output build/dynamic-dex "${CLASSES[@]}"
+"$BUILD_TOOLS/d8" \
+  --lib "$ANDROID_JAR" \
+  --min-api 23 \
+  --output build/dynamic-dex \
+  "${CLASSES[@]}"
+
 test -f build/dynamic-dex/classes.dex
 cp build/dynamic-dex/classes.dex build/classes15.dex
 
