@@ -11,21 +11,25 @@ public final class DynamicLabelsEntry {
     private DynamicLabelsEntry() {}
 
     public static void attach(Activity activity) {
-        Button button = new Button(activity);
-        button.setText("قائمة الحماية");
-        button.setAllCaps(false);
-        button.setAlpha(0.9f);
-        button.setOnClickListener(v -> activity.startActivity(
-                new Intent(activity, DynamicLabelsActivity.class)
-        ));
+        try {
+            Button button = new Button(activity);
+            button.setText("قائمة الحماية");
+            button.setAllCaps(false);
+            button.setAlpha(0.9f);
+            button.setOnClickListener(v -> activity.startActivity(
+                    new Intent(activity, DynamicLabelsActivity.class)
+            ));
 
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        params.gravity = Gravity.END | Gravity.BOTTOM;
-        int margin = Math.round(16 * activity.getResources().getDisplayMetrics().density);
-        params.setMargins(margin, margin, margin, margin * 2);
-        activity.addContentView(button, params);
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            params.gravity = Gravity.END | Gravity.BOTTOM;
+            int margin = Math.round(16 * activity.getResources().getDisplayMetrics().density);
+            params.setMargins(margin, margin, margin, margin * 2);
+            activity.addContentView(button, params);
+        } catch (Throwable ignored) {
+            // The editor is optional: never crash MainActivity if the overlay cannot attach.
+        }
     }
 }
