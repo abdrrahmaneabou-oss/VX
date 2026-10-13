@@ -17,7 +17,8 @@ javac -source 8 -target 8 \
   tools/dynamic/stubs/com/v1f/app/protection/modules/settings/SettingsClickGuardConfig.java \
   tools/dynamic/DynamicLabelsStore.java \
   tools/dynamic/DynamicLabelsActivity.java \
-  tools/dynamic/DynamicLabelsEntry.java
+  tools/dynamic/DynamicLabelsEntry.java \
+  tools/dynamic/RobustSettingsGuard.java
 
 # The stub only exists to satisfy javac. The real class is already in classes4.dex.
 rm -rf build/dynamic-classes/com/v1f/app/protection/modules/settings
