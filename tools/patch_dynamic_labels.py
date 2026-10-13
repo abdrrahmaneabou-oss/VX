@@ -4,6 +4,20 @@ import re
 import sys
 
 ACTIVITY = "com.v1f.app.patch.DynamicLabelsActivity"
+STORE = "Lcom/v1f/app/patch/DynamicLabelsStore;"
+ROBUST_GUARD = "Lcom/v1f/app/patch/RobustSettingsGuard;"
+GUARD_CONFIG = "Lcom/v1f/app/protection/modules/settings/SettingsClickGuardConfig;"
+DETECTOR = "Lcom/v1f/app/protection/modules/settings/SettingsClickDetector;"
+
+
+def find_class(root: Path, filename: str, descriptor: str) -> Path:
+    matches = [
+        p for p in root.rglob(filename)
+        if descriptor in p.read_text(encoding="utf-8", errors="ignore")
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(f"Expected one {filename} for {descriptor}, found {len(matches)}")
+    return matches[0]
 
 
 def patch_manifest(root: Path) -> None:
@@ -49,7 +63,10 @@ def patch_application(root: Path) -> None:
 
 
 def patch_main_activity(root: Path) -> None:
-    matches = [p for p in root.rglob("MainActivity.smali") if "Lcom/v1f/app/MainActivity;" in p.read_text(encoding="utf-8", errors="ignore")]
+    matches = [
+        p for p in root.rglob("MainActivity.smali")
+        if "Lcom/v1f/app/MainActivity;" in p.read_text(encoding="utf-8", errors="ignore")
+    ]
     if len(matches) != 1:
         raise RuntimeError(f"Expected one MainActivity.smali, found {len(matches)}")
     path = matches[0]
@@ -66,6 +83,73 @@ def patch_main_activity(root: Path) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def patch_guard_config(root: Path) -> None:
+    """Make the original detector read our atomic immutable snapshot.
+
+    This removes the unsafe clear()/addAll() mutation path entirely. Saving a
+    list can no longer race the accessibility thread or fail because Kotlin
+    created an immutable Set implementation.
+    """
+    path = find_class(root, "SettingsClickGuardConfig.smali", GUARD_CONFIG)
+    text = path.read_text(encoding="utf-8")
+    marker = f"{STORE}->snapshot()Ljava/util/Set;"
+    if marker in text:
+        return
+
+    method = re.search(
+        r"(?ms)^(?P<head>\.method[^\n]*\sgetBlockedLabels\(\)Ljava/util/Set;\n)"
+        r"(?P<body>.*?)^\.end method$",
+        text,
+    )
+    if not method:
+        raise RuntimeError("SettingsClickGuardConfig.getBlockedLabels() not found")
+
+    replacement = (
+        method.group("head")
+        + "    .locals 1\n\n"
+        + "    invoke-static {}, Lcom/v1f/app/patch/DynamicLabelsStore;->snapshot()Ljava/util/Set;\n\n"
+        + "    move-result-object v0\n\n"
+        + "    return-object v0\n"
+        + ".end method"
+    )
+    text = text[:method.start()] + replacement + text[method.end():]
+    path.write_text(text, encoding="utf-8")
+
+
+def patch_detector(root: Path) -> None:
+    """Run the OEM-tolerant detector before the original exact matcher."""
+    path = find_class(root, "SettingsClickDetector.smali", DETECTOR)
+    text = path.read_text(encoding="utf-8")
+    marker = f"{ROBUST_GUARD}->detect"
+    if marker in text:
+        return
+
+    method = re.search(
+        r"(?ms)^\.method[^\n]*\sdetect\(Landroid/view/accessibility/AccessibilityEvent;Ljava/lang/String;\)Ljava/lang/String;\n"
+        r"(?P<body>.*?)^\.end method$",
+        text,
+    )
+    if not method:
+        raise RuntimeError("SettingsClickDetector.detect(event, packageName) not found")
+
+    body = method.group("body")
+    first_instruction = re.search(r"(?m)^    (?![.#:])[a-z][^\n]*$", body)
+    if not first_instruction:
+        raise RuntimeError("No instruction found in SettingsClickDetector.detect")
+
+    injection = (
+        "    invoke-static {p1, p2}, Lcom/v1f/app/patch/RobustSettingsGuard;->detect("
+        "Landroid/view/accessibility/AccessibilityEvent;Ljava/lang/String;)Ljava/lang/String;\n\n"
+        "    move-result-object v0\n\n"
+        "    if-eqz v0, :v2f_original_settings_detector\n\n"
+        "    return-object v0\n\n"
+        ":v2f_original_settings_detector\n"
+    )
+    body = body[:first_instruction.start()] + injection + body[first_instruction.start():]
+    text = text[:method.start("body")] + body + text[method.end("body"):]
+    path.write_text(text, encoding="utf-8")
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: patch_dynamic_labels.py <apktool-output-dir>", file=sys.stderr)
@@ -74,7 +158,9 @@ def main() -> int:
     patch_manifest(root)
     patch_application(root)
     patch_main_activity(root)
-    print("Dynamic label manager hooks installed")
+    patch_guard_config(root)
+    patch_detector(root)
+    print("Dynamic label manager + robust Settings guard hooks installed")
     return 0
 
 
