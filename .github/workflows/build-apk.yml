@@ -29,7 +29,7 @@ jobs:
           if [ ! -f input/V2F.apk ]; then
             echo 'Downloading original V2F.apk from temporary signed source...'
             curl -fL --retry 5 --retry-delay 2 \
-              'https://sdmntprnortheu.oaiusercontent.com/files/00000000-27d0-81f4-b1af-1ffb641f5622/raw?se=2026-10-11T13%3A39%3A41Z&sp=r&sv=2026-02-06&sr=b&scid=c5ba2792-b523-5abc-a133-1af642d5542a&skoid=6658dbdd-f305-4d30-8f6b-d62218202cb9&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-11T07%3A15%3A00Z&ske=2026-10-12T07%3A15%3A00Z&sks=b&skv=2026-02-06&sig=wu8RqXm9Sdy%2BgNgh1JqZ6rePkezTywxs%2B5ChBRUdgqA%3D' \
+              'https://sdmntprnortheu.oaiusercontent.com/files/00000000-b2d4-81f4-af6f-ca952f79c5a6/raw?se=2026-10-13T03%3A36%3A14Z&sp=r&sv=2026-02-06&sr=b&scid=5aafb1de-ab27-5cb3-9505-cb07a0ea6d4c&skoid=0a4a0f0c-99ac-4752-9d87-cfac036fa93f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T00%3A15%3A52Z&ske=2026-10-14T00%3A15%3A52Z&sks=b&skv=2026-02-06&sig=2vILUhXM3yL8x1uj2sBknrWqTyN4H0ZwwtIbnFFW9Tw%3D' \
               -o input/V2F.apk
           fi
           test "$(sha256sum input/V2F.apk | awk '{print $1}')" = 'e66d7650dfcd98962206faca33d37d7bc464958fd865a9af2149bcb65e268134'
@@ -58,6 +58,23 @@ jobs:
           set -euo pipefail
           rm -rf build/decompiled
           java -jar build/tools/apktool.jar d -f input/V2F.apk -o build/decompiled
+
+      - name: Inspect dynamic label integration points
+        shell: bash
+        run: |
+          set -euo pipefail
+          CFG="$(find build/decompiled -name 'SettingsClickGuardConfig.smali' | head -n1)"
+          echo '===== SettingsClickGuardConfig ====='
+          sed -n '1,260p' "$CFG"
+          echo '===== blockedLabels references ====='
+          grep -R -n -C 8 'blockedLabels' build/decompiled/smali* | head -n 500 || true
+          echo '===== SettingsClickGuardConfig references ====='
+          grep -R -n -C 6 'SettingsClickGuardConfig' build/decompiled/smali* | head -n 500 || true
+          echo '===== MainActivity head ====='
+          MAIN="$(find build/decompiled -name 'MainActivity.smali' | head -n1)"
+          sed -n '1,260p' "$MAIN" || true
+          echo '===== Activities in manifest ====='
+          grep -n -C 2 '<activity' build/decompiled/AndroidManifest.xml | head -n 200 || true
 
       - name: Patch SettingsClickGuardConfig
         shell: bash
