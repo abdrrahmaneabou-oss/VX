@@ -1,0 +1,49 @@
+name: Build V2F dynamic labels
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/dynamic/**'
+      - 'tools/patch_dynamic_labels.py'
+      - 'tools/build_dynamic_dex.sh'
+      - 'tools/package_dynamic.py'
+      - 'tools/build_dynamic_apk.sh'
+      - '.github/workflows/build-dynamic-labels.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Prepare base APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p input build/base
+          curl -fL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/abdrrahmaneabou-oss/VX/actions/artifacts/11703717746/zip -o build/base/base.zip
+          unzip -o build/base/base.zip -d build/base
+          cp "$(find build/base -name '*.apk' | head -n1)" input/V2F.apk
+          unzip -t input/V2F.apk >/dev/null
+
+      - name: Build dynamic label manager
+        run: bash tools/build_dynamic_apk.sh input/V2F.apk build/V2F-dynamic-labels.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: V2F-dynamic-labels
+          path: build/V2F-dynamic-labels.apk
+          if-no-files-found: error
+          retention-days: 30
