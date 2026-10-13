@@ -49,7 +49,11 @@ public final class DynamicLabelsStore {
     }
 
     public static void init(Context context) {
-        apply(load(context));
+        try {
+            apply(load(context));
+        } catch (Throwable ignored) {
+            // Never let the optional editor bring down the app at startup.
+        }
     }
 
     public static void save(Context context, Set<String> labels) {
