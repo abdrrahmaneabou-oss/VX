@@ -60,15 +60,15 @@ def patch_detector(root: Path) -> None:
     if not locals_match:
         raise RuntimeError("SettingsClickDetector.detect does not use .locals")
 
-    old_locals = int(locals_match.group(1))
-    temp = f"v{old_locals}"
-    new_locals_line = f"    .locals {old_locals + 1}"
-    body = body[:locals_match.start()] + new_locals_line + body[locals_match.end():]
-
-    # Insert immediately after .locals so p1/p2 are untouched. If the robust
-    # detector returns a label, preserve the original method contract by
-    # returning that String; otherwise continue through the stock detector.
-    insert_at = body.find("\n", body.find(new_locals_line)) + 1
+    # Do NOT increase .locals here. Kotlin's generated method already has many
+    # parameter registers and increasing locals shifts p0/p1/p2 upward. Some
+    # existing non-/range invoke instructions then exceed the 4-bit register
+    # encoding and apktool fails (for example v18). v0 is safe at method entry:
+    # no valid original path can read an uninitialized local before assigning it.
+    temp = "v0"
+    insert_at = body.find("\n", locals_match.end()) + 1
+    if insert_at <= 0:
+        insert_at = locals_match.end()
     hook = (
         "\n"
         f"    invoke-static {{p1, p2}}, {ROBUST_CLASS}->detect(Landroid/view/accessibility/AccessibilityEvent;Ljava/lang/String;)Ljava/lang/String;\n\n"
