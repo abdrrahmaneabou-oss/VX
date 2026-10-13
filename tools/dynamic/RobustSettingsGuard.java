@@ -1,0 +1,194 @@
+package com.v1f.app.patch;
+
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+/**
+ * A defensive detector for Settings rows whose click event does not expose the
+ * visible label directly. The original V2F detector only inspected
+ * TYPE_VIEW_CLICKED + event/source text; that misses a number of OEM Settings
+ * implementations (including Nubia's Reset app preferences row/dialog).
+ */
+public final class RobustSettingsGuard {
+    private static final String SETTINGS_PACKAGE = "com.android.settings";
+    private static final String RESET_ROW = "Reset app preferences";
+    private static final String RESET_DIALOG = "Reset app preferences?";
+    private static final String RESET_BUTTON = "RESET APPS";
+    private static final int MAX_DIALOG_NODES = 96;
+    private static final int MAX_DIALOG_DEPTH = 7;
+
+    private RobustSettingsGuard() {}
+
+    public static String detect(AccessibilityEvent event, String packageName) {
+        if (event == null || !SETTINGS_PACKAGE.equals(packageName)) return null;
+
+        Set<String> blocked = DynamicLabelsStore.snapshot();
+        if (blocked == null || blocked.isEmpty()) return null;
+
+        final int type = event.getEventType();
+        if (type == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            return detectClick(event, blocked);
+        }
+
+        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                || type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                || type == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            return detectDialog(event, blocked);
+        }
+
+        return null;
+    }
+
+    private static String detectClick(AccessibilityEvent event, Set<String> blocked) {
+        LinkedHashSet<String> texts = new LinkedHashSet<>();
+        addEventText(event, texts);
+
+        AccessibilityNodeInfo source = safeSource(event);
+        int beforeNode = texts.size();
+        collectNode(source, texts, 3, new int[] { 32 });
+
+        String direct = firstBlocked(texts, blocked);
+        if (direct != null) return direct;
+
+        // Some OEM rows report the chevron as the clicked source. In that case
+        // the label is a sibling under the immediate parent. Escalate only when
+        // the source subtree contributed no text, otherwise scanning a large
+        // parent card could falsely match another row.
+        if (source != null && texts.size() == beforeNode) {
+            AccessibilityNodeInfo parent = safeParent(source);
+            collectNode(parent, texts, 2, new int[] { 24 });
+            return firstBlocked(texts, blocked);
+        }
+
+        return null;
+    }
+
+    private static String detectDialog(AccessibilityEvent event, Set<String> blocked) {
+        LinkedHashSet<String> texts = new LinkedHashSet<>();
+        addEventText(event, texts);
+
+        AccessibilityNodeInfo source = safeSource(event);
+        collectNode(source, texts, MAX_DIALOG_DEPTH, new int[] { MAX_DIALOG_NODES });
+
+        // A window/content event may point at one child of a dialog. Walk a few
+        // parents so the title and action button are still observable.
+        AccessibilityNodeInfo cursor = source;
+        for (int i = 0; i < 4 && cursor != null; i++) {
+            cursor = safeParent(cursor);
+            collectNode(cursor, texts, 3, new int[] { 48 });
+        }
+
+        boolean resetRequested = containsNormalized(blocked, RESET_ROW)
+                || containsNormalized(blocked, RESET_DIALOG);
+        if (resetRequested
+                && (containsNormalized(texts, RESET_DIALOG)
+                    || containsNormalized(texts, RESET_BUTTON))) {
+            return RESET_DIALOG;
+        }
+
+        // Permit other explicitly configured dialog titles while avoiding a
+        // broad root-window scan for ordinary row labels.
+        for (String label : blocked) {
+            String normalized = normalize(label);
+            if (normalized != null && normalized.endsWith("?")
+                    && containsNormalized(texts, normalized)) {
+                return normalized;
+            }
+        }
+        return null;
+    }
+
+    private static void addEventText(AccessibilityEvent event, Set<String> out) {
+        try {
+            Collection<CharSequence> values = event.getText();
+            if (values != null) {
+                for (CharSequence value : values) add(out, value);
+            }
+        } catch (Throwable ignored) {}
+        try {
+            add(out, event.getContentDescription());
+        } catch (Throwable ignored) {}
+    }
+
+    private static AccessibilityNodeInfo safeSource(AccessibilityEvent event) {
+        try {
+            return event.getSource();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static AccessibilityNodeInfo safeParent(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        try {
+            return node.getParent();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static void collectNode(
+            AccessibilityNodeInfo node,
+            Set<String> out,
+            int depth,
+            int[] budget
+    ) {
+        if (node == null || depth < 0 || budget[0] <= 0) return;
+        budget[0]--;
+
+        try { add(out, node.getText()); } catch (Throwable ignored) {}
+        try { add(out, node.getContentDescription()); } catch (Throwable ignored) {}
+
+        if (depth == 0) return;
+        int count;
+        try {
+            count = node.getChildCount();
+        } catch (Throwable ignored) {
+            return;
+        }
+        for (int i = 0; i < count && budget[0] > 0; i++) {
+            AccessibilityNodeInfo child;
+            try {
+                child = node.getChild(i);
+            } catch (Throwable ignored) {
+                child = null;
+            }
+            collectNode(child, out, depth - 1, budget);
+        }
+    }
+
+    private static void add(Set<String> out, CharSequence value) {
+        if (value == null) return;
+        String normalized = normalize(value.toString());
+        if (normalized != null) out.add(normalized);
+    }
+
+    private static String firstBlocked(Iterable<String> candidates, Set<String> blocked) {
+        for (String candidate : candidates) {
+            String normalizedCandidate = normalize(candidate);
+            if (normalizedCandidate == null) continue;
+            if (containsNormalized(blocked, normalizedCandidate)) return normalizedCandidate;
+        }
+        return null;
+    }
+
+    private static boolean containsNormalized(Iterable<String> values, String wanted) {
+        String normalizedWanted = normalize(wanted);
+        if (normalizedWanted == null) return false;
+        for (String value : values) {
+            String normalized = normalize(value);
+            if (normalizedWanted.equals(normalized)) return true;
+        }
+        return false;
+    }
+
+    private static String normalize(String value) {
+        if (value == null) return null;
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+}
