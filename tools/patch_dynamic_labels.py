@@ -53,9 +53,7 @@ def patch_application(root: Path) -> None:
     pos = body.rfind(marker)
     if pos < 0:
         raise RuntimeError("No return-void in V1FApplication.onCreate")
-    injection = (
-        "    invoke-static {p0}, Lcom/v1f/app/patch/DynamicLabelsStore;->init(Landroid/content/Context;)V\n\n"
-    )
+    injection = "    invoke-static {p0}, Lcom/v1f/app/patch/DynamicLabelsStore;->init(Landroid/content/Context;)V\n\n"
     body = body[:pos] + injection + body[pos:]
     replacement = ".method public onCreate()V\n" + body + ".end method"
     text = text[:method.start()] + replacement + text[method.end():]
@@ -76,34 +74,23 @@ def patch_main_activity(root: Path) -> None:
     needle = "    invoke-static {p0}, Lcom/v1f/app/patch/BreakRuntime;->attachStatus(Landroid/app/Activity;)V"
     if needle not in text:
         raise RuntimeError("BreakRuntime.attachStatus hook not found in MainActivity")
-    injection = (
-        "    invoke-static {p0}, Lcom/v1f/app/patch/DynamicLabelsEntry;->attach(Landroid/app/Activity;)V\n\n"
-    )
+    injection = "    invoke-static {p0}, Lcom/v1f/app/patch/DynamicLabelsEntry;->attach(Landroid/app/Activity;)V\n\n"
     text = text.replace(needle, injection + needle, 1)
     path.write_text(text, encoding="utf-8")
 
 
 def patch_guard_config(root: Path) -> None:
-    """Make the original detector read our atomic immutable snapshot.
-
-    This removes the unsafe clear()/addAll() mutation path entirely. Saving a
-    list can no longer race the accessibility thread or fail because Kotlin
-    created an immutable Set implementation.
-    """
     path = find_class(root, "SettingsClickGuardConfig.smali", GUARD_CONFIG)
     text = path.read_text(encoding="utf-8")
     marker = f"{STORE}->snapshot()Ljava/util/Set;"
     if marker in text:
         return
-
     method = re.search(
-        r"(?ms)^(?P<head>\.method[^\n]*\sgetBlockedLabels\(\)Ljava/util/Set;\n)"
-        r"(?P<body>.*?)^\.end method$",
+        r"(?ms)^(?P<head>\.method[^\n]*\sgetBlockedLabels\(\)Ljava/util/Set;\n)(?P<body>.*?)^\.end method$",
         text,
     )
     if not method:
         raise RuntimeError("SettingsClickGuardConfig.getBlockedLabels() not found")
-
     replacement = (
         method.group("head")
         + "    .locals 1\n\n"
@@ -117,28 +104,28 @@ def patch_guard_config(root: Path) -> None:
 
 
 def patch_detector(root: Path) -> None:
-    """Run the OEM-tolerant detector before the original exact matcher."""
     path = find_class(root, "SettingsClickDetector.smali", DETECTOR)
     text = path.read_text(encoding="utf-8")
     marker = f"{ROBUST_GUARD}->detect"
     if marker in text:
         return
-
     method = re.search(
-        r"(?ms)^\.method[^\n]*\sdetect\(Landroid/view/accessibility/AccessibilityEvent;Ljava/lang/String;\)Ljava/lang/String;\n"
-        r"(?P<body>.*?)^\.end method$",
+        r"(?ms)^\.method[^\n]*\sdetect\(Landroid/view/accessibility/AccessibilityEvent;Ljava/lang/String;\)Ljava/lang/String;\n(?P<body>.*?)^\.end method$",
         text,
     )
     if not method:
         raise RuntimeError("SettingsClickDetector.detect(event, packageName) not found")
-
     body = method.group("body")
     first_instruction = re.search(r"(?m)^    (?![.#:])[a-z][^\n]*$", body)
     if not first_instruction:
         raise RuntimeError("No instruction found in SettingsClickDetector.detect")
 
+    # p1/p2 map to high physical registers in this Kotlin-generated method.
+    # Normal invoke-static uses 4-bit register operands (v0..v15), so use the
+    # range form to safely pass adjacent parameter registers regardless of the
+    # method's local-register count.
     injection = (
-        "    invoke-static {p1, p2}, Lcom/v1f/app/patch/RobustSettingsGuard;->detect("
+        "    invoke-static/range {p1 .. p2}, Lcom/v1f/app/patch/RobustSettingsGuard;->detect("
         "Landroid/view/accessibility/AccessibilityEvent;Ljava/lang/String;)Ljava/lang/String;\n\n"
         "    move-result-object v0\n\n"
         "    if-eqz v0, :v2f_original_settings_detector\n\n"
