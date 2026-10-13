@@ -9,9 +9,9 @@ import java.util.Set;
 
 /**
  * A defensive detector for Settings rows whose click event does not expose the
- * visible label directly. The original V2F detector only inspected
- * TYPE_VIEW_CLICKED + event/source text; that misses a number of OEM Settings
- * implementations (including Nubia's Reset app preferences row/dialog).
+ * visible label directly. The stock V2F detector only inspects the click event
+ * and its source; several OEM Settings implementations report a child/chevron
+ * instead of the visible row label.
  */
 public final class RobustSettingsGuard {
     private static final String SETTINGS_PACKAGE = "com.android.settings";
@@ -48,20 +48,20 @@ public final class RobustSettingsGuard {
         addEventText(event, texts);
 
         AccessibilityNodeInfo source = safeSource(event);
-        int beforeNode = texts.size();
         collectNode(source, texts, 3, new int[] { 32 });
 
         String direct = firstBlocked(texts, blocked);
         if (direct != null) return direct;
 
-        // Some OEM rows report the chevron as the clicked source. In that case
-        // the label is a sibling under the immediate parent. Escalate only when
-        // the source subtree contributed no text, otherwise scanning a large
-        // parent card could falsely match another row.
-        if (source != null && texts.size() == beforeNode) {
-            AccessibilityNodeInfo parent = safeParent(source);
+        // On Nubia and other OEM Settings screens the click source can be a
+        // chevron or another child with its own contentDescription. Therefore
+        // do not require the source to be textless before checking its row.
+        // Only inspect the immediate parent to avoid matching unrelated rows.
+        AccessibilityNodeInfo parent = safeParent(source);
+        if (parent != null) {
             collectNode(parent, texts, 2, new int[] { 24 });
-            return firstBlocked(texts, blocked);
+            String fromRow = firstBlocked(texts, blocked);
+            if (fromRow != null) return fromRow;
         }
 
         return null;
