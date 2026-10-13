@@ -4,13 +4,12 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'input/V2F.apk'
-      - 'tools/patch_settings_guard.py'
-      - 'tools/patch_break_interval.py'
+      - 'tools/**'
       - '.github/workflows/build-apk.yml'
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   build:
@@ -21,20 +20,24 @@ jobs:
       - name: Checkout VX
         uses: actions/checkout@v4
 
-      - name: Prepare base APK
+      - name: Prepare stable base APK from prior artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p input
-          if [ ! -f input/V2F.apk ]; then
-            echo 'Downloading original V2F.apk from temporary signed source...'
-            curl -fL --retry 5 --retry-delay 2 \
-              'https://sdmntprnortheu.oaiusercontent.com/files/00000000-b2d4-81f4-af6f-ca952f79c5a6/raw?se=2026-10-13T03%3A36%3A14Z&sp=r&sv=2026-02-06&sr=b&scid=5aafb1de-ab27-5cb3-9505-cb07a0ea6d4c&skoid=0a4a0f0c-99ac-4752-9d87-cfac036fa93f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T00%3A15%3A52Z&ske=2026-10-14T00%3A15%3A52Z&sks=b&skv=2026-02-06&sig=2vILUhXM3yL8x1uj2sBknrWqTyN4H0ZwwtIbnFFW9Tw%3D' \
-              -o input/V2F.apk
-          fi
-          test "$(sha256sum input/V2F.apk | awk '{print $1}')" = 'e66d7650dfcd98962206faca33d37d7bc464958fd865a9af2149bcb65e268134'
+          mkdir -p input build/base
+          curl -fL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/abdrrahmaneabou-oss/VX/actions/artifacts/11703717746/zip \
+            -o build/base/base.zip
+          unzip -o build/base/base.zip -d build/base
+          BASE="$(find build/base -name '*.apk' | head -n1)"
+          test -n "$BASE"
+          cp "$BASE" input/V2F.apk
           unzip -t input/V2F.apk >/dev/null
-          echo "Base APK verified: $(du -h input/V2F.apk | cut -f1)"
+          echo "Stable base APK: $(du -h input/V2F.apk | cut -f1)"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -65,28 +68,16 @@ jobs:
           set -euo pipefail
           CFG="$(find build/decompiled -name 'SettingsClickGuardConfig.smali' | head -n1)"
           echo '===== SettingsClickGuardConfig ====='
-          sed -n '1,260p' "$CFG"
+          sed -n '1,280p' "$CFG"
           echo '===== blockedLabels references ====='
-          grep -R -n -C 8 'blockedLabels' build/decompiled/smali* | head -n 500 || true
+          grep -R -n -C 10 'blockedLabels' build/decompiled/smali* | head -n 600 || true
           echo '===== SettingsClickGuardConfig references ====='
-          grep -R -n -C 6 'SettingsClickGuardConfig' build/decompiled/smali* | head -n 500 || true
+          grep -R -n -C 8 'SettingsClickGuardConfig' build/decompiled/smali* | head -n 600 || true
           echo '===== MainActivity head ====='
           MAIN="$(find build/decompiled -name 'MainActivity.smali' | head -n1)"
-          sed -n '1,260p' "$MAIN" || true
+          sed -n '1,320p' "$MAIN" || true
           echo '===== Activities in manifest ====='
-          grep -n -C 2 '<activity' build/decompiled/AndroidManifest.xml | head -n 200 || true
-
-      - name: Patch SettingsClickGuardConfig
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 tools/patch_settings_guard.py build/decompiled
-
-      - name: Patch automatic break interval to 12 hours
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 tools/patch_break_interval.py build/decompiled
+          grep -n -C 3 '<activity' build/decompiled/AndroidManifest.xml | head -n 220 || true
 
       - name: Rebuild APK
         shell: bash
@@ -100,79 +91,52 @@ jobs:
         run: |
           set -euo pipefail
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          test -d "$SDK_ROOT/build-tools"
           BUILD_TOOLS="$(find "$SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
-          test -n "$BUILD_TOOLS"
           test -x "$BUILD_TOOLS/zipalign"
           test -x "$BUILD_TOOLS/apksigner"
           echo "BUILD_TOOLS=$BUILD_TOOLS" >> "$GITHUB_ENV"
-          echo "Using Android build tools: $BUILD_TOOLS"
-          "$BUILD_TOOLS/apksigner" version
 
       - name: Zipalign APK
         shell: bash
         run: |
           set -euo pipefail
           "$BUILD_TOOLS/zipalign" -f -p 4 build/V2F-unsigned.apk build/V2F-aligned.apk
-          "$BUILD_TOOLS/zipalign" -c -v 4 build/V2F-aligned.apk
 
       - name: Prepare signing key
         shell: bash
-        env:
-          APK_KEYSTORE_B64: ${{ secrets.APK_KEYSTORE_B64 }}
-          APK_KEY_ALIAS: ${{ secrets.APK_KEY_ALIAS }}
-          APK_KEYSTORE_PASSWORD: ${{ secrets.APK_KEYSTORE_PASSWORD }}
-          APK_KEY_PASSWORD: ${{ secrets.APK_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -n "${APK_KEYSTORE_B64:-}" ]; then
-            printf '%s' "$APK_KEYSTORE_B64" | base64 -d > build/signing.jks
-            echo "KS_ALIAS=${APK_KEY_ALIAS:?Set APK_KEY_ALIAS secret}" >> "$GITHUB_ENV"
-            echo "KS_PASS=${APK_KEYSTORE_PASSWORD:?Set APK_KEYSTORE_PASSWORD secret}" >> "$GITHUB_ENV"
-            echo "KEY_PASS=${APK_KEY_PASSWORD:?Set APK_KEY_PASSWORD secret}" >> "$GITHUB_ENV"
-          else
-            keytool -genkeypair -v \
-              -keystore build/signing.jks \
-              -storepass android \
-              -keypass android \
-              -alias v2f-ci \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname 'CN=V2F CI,O=VX,C=US'
-            echo 'KS_ALIAS=v2f-ci' >> "$GITHUB_ENV"
-            echo 'KS_PASS=android' >> "$GITHUB_ENV"
-            echo 'KEY_PASS=android' >> "$GITHUB_ENV"
-          fi
+          keytool -genkeypair -v \
+            -keystore build/signing.jks \
+            -storepass android \
+            -keypass android \
+            -alias v2f-ci \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname 'CN=V2F CI,O=VX,C=US'
 
-      - name: Sign APK
+      - name: Sign and verify APK
         shell: bash
         run: |
           set -euo pipefail
           "$BUILD_TOOLS/apksigner" sign \
             --ks build/signing.jks \
-            --ks-key-alias "$KS_ALIAS" \
-            --ks-pass "pass:$KS_PASS" \
-            --key-pass "pass:$KEY_PASS" \
+            --ks-key-alias v2f-ci \
+            --ks-pass pass:android \
+            --key-pass pass:android \
             --v1-signing-enabled true \
             --v2-signing-enabled true \
             --v3-signing-enabled true \
             --out build/V2F-patched.apk \
             build/V2F-aligned.apk
-
-      - name: Verify final APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          unzip -t build/V2F-patched.apk >/dev/null
-          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs build/V2F-patched.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose build/V2F-patched.apk
           "$BUILD_TOOLS/zipalign" -c -v 4 build/V2F-patched.apk
-          sha256sum build/V2F-patched.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: V2F-patched-12h
+          name: V2F-dynamic-work
           path: build/V2F-patched.apk
           if-no-files-found: error
           retention-days: 30
