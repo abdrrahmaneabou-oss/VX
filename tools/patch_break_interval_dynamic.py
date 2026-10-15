@@ -54,18 +54,21 @@ def patch_break_rules(root: Path) -> None:
         )
 
     patched = pattern.sub(replace, text)
-    if replacements != 2:
+    # The current stable 12h base contains one live const-wide interval reference.
+    # Older bases contained two. Patch every recognized live reference and only
+    # fail when none are found, so both layouts remain supported.
+    if replacements < 1:
         found = []
         for token in ("0x2932e00", "43200000", "0x5265c00", "86400000"):
             if token.lower() in text.lower():
                 found.append(token)
         raise RuntimeError(
-            f"Expected exactly two static 12h/24h const-wide references in BreakRules, "
-            f"patched {replacements}; visible tokens={found}"
+            "No static 12h/24h const-wide interval reference found in BreakRules; "
+            f"visible tokens={found}"
         )
 
     path.write_text(patched, encoding="utf-8")
-    print(f"Dynamic interval hooked in {path}; replaced {replacements} static references")
+    print(f"Dynamic interval hooked in {path}; replaced {replacements} static reference(s)")
 
 
 def patch_application(root: Path) -> None:
