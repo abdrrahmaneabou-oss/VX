@@ -18,6 +18,8 @@ javac -source 8 -target 8 \
   tools/dynamic/DynamicLabelsStore.java \
   tools/dynamic/DynamicLabelsActivity.java \
   tools/dynamic/DynamicLabelsEntry.java \
+  tools/dynamic/BreakIntervalStore.java \
+  tools/dynamic/BreakIntervalEntry.java \
   tools/dynamic/RobustSettingsGuard.java
 
 # The stub only exists to satisfy javac. The real class is already in classes4.dex.
@@ -25,7 +27,7 @@ rm -rf build/dynamic-classes/com/v1f/app/protection/modules/settings
 
 mapfile -t CLASSES < <(find build/dynamic-classes -name '*.class' -print)
 if [ "${#CLASSES[@]}" -eq 0 ]; then
-  echo 'No dynamic label classes were compiled' >&2
+  echo 'No dynamic patch classes were compiled' >&2
   exit 1
 fi
 
@@ -38,4 +40,4 @@ fi
 test -f build/dynamic-dex/classes.dex
 cp build/dynamic-dex/classes.dex build/classes15.dex
 
-echo "Dynamic label manager DEX ready: $(du -h build/classes15.dex | cut -f1)"
+echo "Dynamic patch DEX ready: $(du -h build/classes15.dex | cut -f1)"

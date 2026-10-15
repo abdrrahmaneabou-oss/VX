@@ -1,4 +1,4 @@
-name: Build V2F dynamic labels
+name: Build V2F configurable break interval
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
       - 'tools/dynamic/**'
       - 'tools/patch_dynamic_labels.py'
       - 'tools/patch_dynamic_guard.py'
+      - 'tools/patch_break_interval_dynamic.py'
       - 'tools/build_dynamic_dex.sh'
       - 'tools/package_dynamic.py'
       - 'tools/build_dynamic_apk.sh'
@@ -39,12 +40,17 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" input/V2F.apk
           unzip -t input/V2F.apk >/dev/null
 
-      - name: Build dynamic label manager
-        run: bash tools/build_dynamic_apk.sh input/V2F.apk build/V2F-dynamic-labels.apk
+      - name: Build configurable interval APK
+        env:
+          APK_KEYSTORE_B64: ${{ secrets.APK_KEYSTORE_B64 }}
+          APK_KEY_ALIAS: ${{ secrets.APK_KEY_ALIAS }}
+          APK_KEYSTORE_PASSWORD: ${{ secrets.APK_KEYSTORE_PASSWORD }}
+          APK_KEY_PASSWORD: ${{ secrets.APK_KEY_PASSWORD }}
+        run: bash tools/build_dynamic_apk.sh input/V2F.apk build/V2F-configurable-break.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: V2F-dynamic-labels
-          path: build/V2F-dynamic-labels.apk
+          name: V2F-configurable-break
+          path: build/V2F-configurable-break.apk
           if-no-files-found: error
           retention-days: 30
