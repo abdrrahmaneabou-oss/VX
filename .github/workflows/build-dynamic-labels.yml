@@ -16,6 +16,7 @@ on:
 permissions:
   contents: read
   actions: read
+  issues: write
 
 jobs:
   build:
@@ -41,14 +42,37 @@ jobs:
           unzip -t input/V2F.apk >/dev/null
 
       - name: Build configurable interval APK
+        id: configurable_build
+        continue-on-error: true
         env:
           APK_KEYSTORE_B64: ${{ secrets.APK_KEYSTORE_B64 }}
           APK_KEY_ALIAS: ${{ secrets.APK_KEY_ALIAS }}
           APK_KEYSTORE_PASSWORD: ${{ secrets.APK_KEYSTORE_PASSWORD }}
           APK_KEY_PASSWORD: ${{ secrets.APK_KEY_PASSWORD }}
-        run: bash tools/build_dynamic_apk.sh input/V2F.apk build/V2F-configurable-break.apk
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build
+          bash tools/build_dynamic_apk.sh input/V2F.apk build/V2F-configurable-break.apk 2>&1 | tee build/configurable-build.log
+
+      - name: Report build failure
+        if: steps.configurable_build.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo "### Failed run $GITHUB_RUN_ID"
+            echo
+            echo '```text'
+            tail -n 220 build/configurable-build.log
+            echo '```'
+          } > /tmp/v2f-build-diagnostic.md
+          gh issue comment 1 --repo "$GITHUB_REPOSITORY" --body-file /tmp/v2f-build-diagnostic.md
+          exit 1
 
       - uses: actions/upload-artifact@v4
+        if: steps.configurable_build.outcome == 'success'
         with:
           name: V2F-configurable-break
           path: build/V2F-configurable-break.apk
