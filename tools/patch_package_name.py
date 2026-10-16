@@ -23,8 +23,8 @@ def patch_file(path: Path) -> bool:
         modified = True
 
     if path.name == "AndroidManifest.xml":
-        # Rename application label to Vx
-        new_content = re.sub(r'android:label="[^"]*"', 'android:label="Vx"', new_content)
+        # Target application label specifically
+        new_content = re.sub(r'(<application\b[^>]*?\bandroid:label=")[^"]*(")', r'\g<1>Vx\g<2>', new_content)
         modified = True
 
     if path.name == "strings.xml":
