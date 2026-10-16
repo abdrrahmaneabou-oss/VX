@@ -210,7 +210,7 @@ public final class DynamicLabelsActivity extends Activity {
     private String join(Iterable<String> values) {
         StringBuilder out = new StringBuilder();
         for (String value : values) {
-            if (out.length() > 0) out.append('\\n');
+            if (out.length() > 0) out.append('\n');
             out.append(value);
         }
         return out.toString();
