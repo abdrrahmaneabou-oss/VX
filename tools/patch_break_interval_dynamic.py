@@ -55,7 +55,7 @@ def main() -> int:
         raise RuntimeError("The fixed interval literal remains in BreakRules")
 
     path.write_text(patched, encoding="utf-8")
-    print(f"Patched {path}: {count} fixed 24-hour reference(s) now use {STORE}->getIntervalMs()J")
+    print(f"Patched {path}: {count} fixed interval reference(s) now use {STORE}->getIntervalMs()J")
     return 0
 
 
