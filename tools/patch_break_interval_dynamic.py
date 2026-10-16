@@ -51,8 +51,8 @@ def main() -> int:
                 if "86400000" in line or "5265c00" in line.lower():
                     print(f"{other}:{number}: {line}", file=sys.stderr)
         raise RuntimeError("Could not find the approved APK interval literal; diagnostics above identify the actual bytecode representation.")
-    if INTERVAL_HEX.lower() in patched.lower() or re.search(r"(?<!\d)86400000(?!\d)", patched):
-        raise RuntimeError("The fixed interval literal remains in BreakRules")
+    if pattern.search(patched):
+        raise RuntimeError("A fixed interval const-wide instruction remains in BreakRules")
 
     path.write_text(patched, encoding="utf-8")
     print(f"Patched {path}: {count} fixed interval reference(s) now use {STORE}->getIntervalMs()J")
