@@ -11,6 +11,7 @@ on:
       - 'tools/build_dynamic_dex.sh'
       - 'tools/package_dynamic.py'
       - 'tools/build_dynamic_apk.sh'
+      - 'tools/inspect_block_state.py'
       - '.github/workflows/build-dynamic-labels.yml'
 
 permissions:
