@@ -32,6 +32,7 @@ public final class BreakIntervalStore {
     }
 
     public static int adjustHours(int delta) {
+        if (!BreakRuntime.allowsAll()) return getHours();
         int next = clamp(getHours() + delta);
         Context context = appContext;
         if (context != null) {
@@ -42,6 +43,7 @@ public final class BreakIntervalStore {
     }
 
     public static int setHours(int hours) {
+        if (!BreakRuntime.allowsAll()) return getHours();
         int next = clamp(hours);
         Context context = appContext;
         if (context != null) {
