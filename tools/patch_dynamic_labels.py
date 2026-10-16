@@ -43,7 +43,7 @@ def patch_application(root: Path) -> None:
         raise RuntimeError(f"Expected one V1FApplication.smali, found {len(matches)}")
     path = matches[0]
     text = path.read_text(encoding="utf-8")
-    if "DynamicLabelsStore;->init" in text:
+    if "BreakIntervalStore;->init" in text:
         return
     method = re.search(r"(?ms)^\.method public onCreate\(\)V\n(?P<body>.*?)^\.end method$", text)
     if not method:
@@ -53,7 +53,8 @@ def patch_application(root: Path) -> None:
     pos = body.rfind(marker)
     if pos < 0:
         raise RuntimeError("No return-void in V1FApplication.onCreate")
-    injection = "    invoke-static {p0}, Lcom/v1f/app/patch/DynamicLabelsStore;->init(Landroid/content/Context;)V\n\n"
+    injection = ("    invoke-static {p0}, Lcom/v1f/app/patch/DynamicLabelsStore;->init(Landroid/content/Context;)V\n\n"
+                 "    invoke-static {p0}, Lcom/v1f/app/patch/BreakIntervalStore;->init(Landroid/content/Context;)V\n\n")
     body = body[:pos] + injection + body[pos:]
     replacement = ".method public onCreate()V\n" + body + ".end method"
     text = text[:method.start()] + replacement + text[method.end():]
