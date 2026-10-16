@@ -5,31 +5,20 @@ import sys
 
 def main():
     root = Path(sys.argv[1])
-    print("=== V2F state symbols ===", flush=True)
+    print("=== BreakRuntime/BreakRules class fields and methods ===", flush=True)
     for p in root.rglob("*.smali"):
-        text = p.read_text(encoding="utf-8", errors="ignore")
-        if "Lcom/v1f/app/patch/BreakRules$State;" in text and p.name in ("BreakRules$State.smali", "BreakRules.smali"):
+        if p.name.startswith(("BreakRuntime", "BreakRules")):
             print(f"--- {p} ---", flush=True)
-            for line in text.splitlines():
-                if line.startswith(".field") or line.startswith(".method"):
-                    print(line, flush=True)
-            for i, line in enumerate(text.splitlines(), 1):
-                if "BreakRules$State;->" in line or "BreakRules;->at" in line:
+            for i, line in enumerate(p.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+                if line.startswith((".class", ".super", ".field", ".method")) or re.search(r"strict|block|break|active|enabled|state|start|stop|until|deadline|pref|SharedPreferences|isBreak", line, re.I):
                     print(f"{i}: {line}", flush=True)
-    print("=== likely strict-mode names and persisted keys ===", flush=True)
-    patterns = re.compile(r"strict.?block|hard.?block|block.?mode|strict.?mode|blocking.?enabled|strict_block|hard_block|block_mode|strict_mode", re.I)
-    count = 0
-    for p in root.rglob("*.smali"):
-        lines = p.read_text(encoding="utf-8", errors="ignore").splitlines()
-        for i, line in enumerate(lines):
-            if patterns.search(line):
-                print(f"{p}:{i+1}: {line.strip()}", flush=True)
-                count += 1
-                if count >= 100:
-                    print("...truncated...", flush=True)
-                    return 0
-    if count == 0:
-        print("No literal strict-mode identifiers found.", flush=True)
+    print("=== MainActivity BreakRuntime references ===", flush=True)
+    for p in root.rglob("MainActivity.smali"):
+        text=p.read_text(encoding="utf-8", errors="ignore")
+        if "Lcom/v1f/app/MainActivity;" in text:
+            for i,line in enumerate(text.splitlines(),1):
+                if "BreakRuntime" in line or "BreakRules" in line:
+                    print(f"{p}:{i}: {line}",flush=True)
     return 0
 
 if __name__ == "__main__":
