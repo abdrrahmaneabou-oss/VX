@@ -41,9 +41,16 @@ def main() -> int:
 
     patched, count = pattern.subn(replace, text)
     if count < 1:
-        raise RuntimeError(
-            "Could not find the 24-hour const-wide literal in BreakRules; refusing to guess."
-        )
+        print("BreakRules candidates:", file=sys.stderr)
+        for number, line in enumerate(text.splitlines(), 1):
+            if "const-wide" in line or "86400000" in line or "5265c00" in line.lower():
+                print(f"{number}: {line}", file=sys.stderr)
+        print("Matching interval literals anywhere in smali:", file=sys.stderr)
+        for other in root.rglob("*.smali"):
+            for number, line in enumerate(other.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+                if "86400000" in line or "5265c00" in line.lower():
+                    print(f"{other}:{number}: {line}", file=sys.stderr)
+        raise RuntimeError("Could not find the 24-hour literal; diagnostics above identify the actual bytecode representation.")
     if INTERVAL_HEX.lower() in patched.lower() or re.search(r"(?<!\d)86400000(?!\d)", patched):
         raise RuntimeError("A fixed 24-hour interval literal remains in BreakRules")
 
