@@ -67,7 +67,7 @@ public final class DynamicLabelsStore {
     }
 
     public static void save(Context context, Set<String> labels) {
-        if (!BreakRuntime.allowsAll()) throw new IllegalStateException("Settings are locked during strict blocking");
+        if (!StrictBlockPolicy.allowsAll()) throw new IllegalStateException("Settings are locked during strict blocking");
         LinkedHashSet<String> copy = sanitize(labels);
         if (context != null) {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
