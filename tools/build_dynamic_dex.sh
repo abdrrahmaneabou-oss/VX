@@ -16,6 +16,7 @@ javac -source 8 -target 8 \
   -d build/dynamic-classes \
   tools/dynamic/stubs/com/v1f/app/protection/modules/settings/SettingsClickGuardConfig.java \
   tools/dynamic/DynamicLabelsStore.java \
+  tools/dynamic/BreakIntervalStore.java \
   tools/dynamic/DynamicLabelsActivity.java \
   tools/dynamic/DynamicLabelsEntry.java \
   tools/dynamic/RobustSettingsGuard.java
