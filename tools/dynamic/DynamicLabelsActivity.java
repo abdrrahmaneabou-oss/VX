@@ -2,8 +2,11 @@ package com.v1f.app.patch;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -15,6 +18,19 @@ import java.util.LinkedHashSet;
 public final class DynamicLabelsActivity extends Activity {
     private EditText editor;
     private TextView intervalValue;
+    private TextView lockStatus;
+    private Button minus;
+    private Button plus;
+    private Button save;
+    private Button reset;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean locked;
+    private final Runnable policyRefresh = new Runnable() {
+        @Override public void run() {
+            refreshPolicy();
+            if (!isFinishing()) handler.postDelayed(this, 500L);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle state) {
@@ -30,10 +46,16 @@ public final class DynamicLabelsActivity extends Activity {
         title.setTextSize(24f);
         root.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
+        lockStatus = new TextView(this);
+        lockStatus.setTextSize(15f);
+        LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(-1, -2);
+        statusParams.setMargins(0, dp(8), 0, dp(10));
+        root.addView(lockStatus, statusParams);
+
         TextView help = new TextView(this);
         help.setText("فترة الاستراحة وقائمة الجمل المحظورة. كل جملة في سطر مستقل.");
         LinearLayout.LayoutParams helpParams = new LinearLayout.LayoutParams(-1, -2);
-        helpParams.setMargins(0, dp(8), 0, dp(10));
+        helpParams.setMargins(0, 0, 0, dp(10));
         root.addView(help, helpParams);
 
         TextView intervalTitle = new TextView(this);
@@ -45,7 +67,7 @@ public final class DynamicLabelsActivity extends Activity {
         intervalRow.setOrientation(LinearLayout.HORIZONTAL);
         intervalRow.setGravity(Gravity.CENTER_VERTICAL);
 
-        Button minus = new Button(this);
+        minus = new Button(this);
         minus.setText("− ساعة");
         minus.setAllCaps(false);
         intervalRow.addView(minus, new LinearLayout.LayoutParams(0, -2, 1f));
@@ -55,7 +77,7 @@ public final class DynamicLabelsActivity extends Activity {
         intervalValue.setGravity(Gravity.CENTER);
         intervalRow.addView(intervalValue, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        Button plus = new Button(this);
+        plus = new Button(this);
         plus.setText("+ ساعة");
         plus.setAllCaps(false);
         intervalRow.addView(plus, new LinearLayout.LayoutParams(0, -2, 1f));
@@ -66,16 +88,6 @@ public final class DynamicLabelsActivity extends Activity {
         LinearLayout.LayoutParams intervalHelpParams = new LinearLayout.LayoutParams(-1, -2);
         intervalHelpParams.setMargins(0, 0, 0, dp(12));
         root.addView(intervalHelp, intervalHelpParams);
-        refreshInterval();
-
-        minus.setOnClickListener(v -> {
-            BreakIntervalStore.adjustHours(-1);
-            refreshInterval();
-        });
-        plus.setOnClickListener(v -> {
-            BreakIntervalStore.adjustHours(1);
-            refreshInterval();
-        });
 
         TextView labelsTitle = new TextView(this);
         labelsTitle.setText("قائمة الجمل المحظورة");
@@ -88,17 +100,31 @@ public final class DynamicLabelsActivity extends Activity {
         editor.setText(join(DynamicLabelsStore.load(this)));
         root.addView(editor, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-        Button save = new Button(this);
+        save = new Button(this);
         save.setText("حفظ تغييرات قائمة الحماية");
         save.setAllCaps(false);
         root.addView(save, new LinearLayout.LayoutParams(-1, -2));
 
-        Button reset = new Button(this);
+        reset = new Button(this);
         reset.setText("استعادة القائمة الافتراضية");
         reset.setAllCaps(false);
         root.addView(reset, new LinearLayout.LayoutParams(-1, -2));
 
+        minus.setOnClickListener(v -> {
+            if (!requireEditable()) return;
+            BreakIntervalStore.adjustHours(-1);
+            refreshInterval();
+            refreshPolicy();
+        });
+        plus.setOnClickListener(v -> {
+            if (!requireEditable()) return;
+            BreakIntervalStore.adjustHours(1);
+            refreshInterval();
+            refreshPolicy();
+        });
+
         save.setOnClickListener(v -> {
+            if (!requireEditable()) return;
             try {
                 LinkedHashSet<String> values = parse(editor.getText().toString());
                 DynamicLabelsStore.save(this, values);
@@ -108,9 +134,11 @@ public final class DynamicLabelsActivity extends Activity {
             } catch (Throwable error) {
                 Toast.makeText(this, "تعذر حفظ القائمة: " + safeMessage(error), Toast.LENGTH_LONG).show();
             }
+            refreshPolicy();
         });
 
         reset.setOnClickListener(v -> {
+            if (!requireEditable()) return;
             try {
                 DynamicLabelsStore.reset(this);
                 editor.setText(join(DynamicLabelsStore.load(this)));
@@ -119,15 +147,55 @@ public final class DynamicLabelsActivity extends Activity {
             } catch (Throwable error) {
                 Toast.makeText(this, "تعذر استعادة القائمة: " + safeMessage(error), Toast.LENGTH_LONG).show();
             }
+            refreshPolicy();
         });
 
         setContentView(root);
+        refreshInterval();
+        refreshPolicy();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        handler.removeCallbacks(policyRefresh);
+        handler.post(policyRefresh);
+    }
+
+    @Override protected void onPause() {
+        handler.removeCallbacks(policyRefresh);
+        super.onPause();
+    }
+
+    private boolean requireEditable() {
+        if (BreakRuntime.allowsAll()) return true;
+        refreshPolicy();
+        Toast.makeText(this, "الإعدادات مقفلة أثناء الحظر الصارم. انتظر الاستراحة أو أوقف الحظر.", Toast.LENGTH_LONG).show();
+        return false;
+    }
+
+    private void refreshPolicy() {
+        boolean canEdit = BreakRuntime.allowsAll();
+        locked = !canEdit;
+        if (lockStatus != null) {
+            lockStatus.setText(canEdit
+                    ? "مسموح بالتعديل: الحظر غير مفعّل أو أنت في وقت الاستراحة."
+                    : "🔒 الحظر الصارم مفعّل — قائمة الجمل ومدة الاستراحة مقفلتان.");
+        }
+        if (editor != null) editor.setEnabled(canEdit);
+        if (minus != null) minus.setEnabled(canEdit && BreakIntervalStore.getHours() > 1);
+        if (plus != null) plus.setEnabled(canEdit && BreakIntervalStore.getHours() < 24);
+        if (save != null) save.setEnabled(canEdit);
+        if (reset != null) reset.setEnabled(canEdit);
+        if (editor != null && locked) {
+            // Discard unsaved edits immediately if strict blocking starts while this screen is open.
+            editor.setText(join(DynamicLabelsStore.load(this)));
+            editor.setSelection(0);
+        }
+        refreshInterval();
     }
 
     private void refreshInterval() {
-        if (intervalValue != null) {
-            intervalValue.setText(BreakIntervalStore.getHours() + " ساعة");
-        }
+        if (intervalValue != null) intervalValue.setText(BreakIntervalStore.getHours() + " ساعة");
     }
 
     private LinkedHashSet<String> parse(String text) {
@@ -142,7 +210,7 @@ public final class DynamicLabelsActivity extends Activity {
     private String join(Iterable<String> values) {
         StringBuilder out = new StringBuilder();
         for (String value : values) {
-            if (out.length() > 0) out.append('\n');
+            if (out.length() > 0) out.append('\\n');
             out.append(value);
         }
         return out.toString();
