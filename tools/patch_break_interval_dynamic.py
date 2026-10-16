@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Replace the fixed break interval literal with the persisted runtime setting."""
+from pathlib import Path
+import re
+import sys
+
+TARGET_CLASS = "Lcom/v1f/app/patch/BreakRules;"
+INTERVAL_HEX = "0x5265c00"  # 86,400,000 ms (24 hours)
+INTERVAL_DECIMAL = "86400000"
+STORE = "Lcom/v1f/app/patch/BreakIntervalStore;"
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("Usage: patch_break_interval_dynamic.py <apktool-output-dir>", file=sys.stderr)
+        return 2
+
+    root = Path(sys.argv[1])
+    candidates = [
+        p for p in root.rglob("BreakRules.smali")
+        if TARGET_CLASS in p.read_text(encoding="utf-8", errors="ignore")
+    ]
+    if len(candidates) != 1:
+        raise RuntimeError(f"Expected exactly one BreakRules.smali, found {len(candidates)}")
+
+    path = candidates[0]
+    text = path.read_text(encoding="utf-8")
+    pattern = re.compile(
+        rf"(?m)^(?P<indent>\s*)(?P<op>const-wide(?:/\d+)?|const-wide)\s+"
+        rf"(?P<reg>v\d+),\s*(?:{re.escape(INTERVAL_HEX)}|{INTERVAL_DECIMAL})\s*$",
+        re.IGNORECASE,
+    )
+
+    def replace(match: re.Match) -> str:
+        indent = match.group("indent")
+        reg = match.group("reg")
+        return (
+            f"{indent}invoke-static {{}}, {STORE}->getIntervalMs()J\n"
+            f"{indent}move-result-wide {reg}"
+        )
+
+    patched, count = pattern.subn(replace, text)
+    if count < 1:
+        raise RuntimeError(
+            "Could not find the 24-hour const-wide literal in BreakRules; refusing to guess."
+        )
+    if INTERVAL_HEX.lower() in patched.lower() or re.search(r"(?<!\d)86400000(?!\d)", patched):
+        raise RuntimeError("A fixed 24-hour interval literal remains in BreakRules")
+
+    path.write_text(patched, encoding="utf-8")
+    print(f"Patched {path}: {count} fixed 24-hour reference(s) now use {STORE}->getIntervalMs()J")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
