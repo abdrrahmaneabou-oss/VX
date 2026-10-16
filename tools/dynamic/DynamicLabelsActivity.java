@@ -167,14 +167,14 @@ public final class DynamicLabelsActivity extends Activity {
     }
 
     private boolean requireEditable() {
-        if (BreakRuntime.allowsAll()) return true;
+        if (StrictBlockPolicy.allowsAll()) return true;
         refreshPolicy();
         Toast.makeText(this, "الإعدادات مقفلة أثناء الحظر الصارم. انتظر الاستراحة أو أوقف الحظر.", Toast.LENGTH_LONG).show();
         return false;
     }
 
     private void refreshPolicy() {
-        boolean canEdit = BreakRuntime.allowsAll();
+        boolean canEdit = StrictBlockPolicy.allowsAll();
         locked = !canEdit;
         if (lockStatus != null) {
             lockStatus.setText(canEdit
