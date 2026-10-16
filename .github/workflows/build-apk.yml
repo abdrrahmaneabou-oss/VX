@@ -62,6 +62,15 @@ jobs:
           rm -rf build/decompiled
           java -jar build/tools/apktool.jar d -f input/V2F.apk -o build/decompiled
 
+      - name: Change only APK application package ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST=build/decompiled/AndroidManifest.xml
+          grep -q 'package="com.v1f.app"' "$MANIFEST"
+          sed -i 's/package="com.v1f.app"/package="com.vx.app"/' "$MANIFEST"
+          grep -q 'package="com.vx.app"' "$MANIFEST"
+
       - name: Inspect dynamic label integration points
         shell: bash
         run: |
