@@ -7,6 +7,7 @@ on:
       - 'tools/dynamic/**'
       - 'tools/patch_dynamic_labels.py'
       - 'tools/patch_dynamic_guard.py'
+      - 'tools/patch_break_interval_dynamic.py'
       - 'tools/build_dynamic_dex.sh'
       - 'tools/package_dynamic.py'
       - 'tools/build_dynamic_apk.sh'
