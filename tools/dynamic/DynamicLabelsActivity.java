@@ -24,15 +24,16 @@ public final class DynamicLabelsActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
 
-        int cardBgColor = 0xFF1E2638;
-        int borderColor = 0xFF334155;
-        int primaryAccent = 0xFF8B5CF6; // Purple accent
-        int dangerAccent = 0xFFEF4444;  // Red accent
+        int spaceBgColor = 0xFF0B0F19;    // Cosmic Void Space
+        int cardBgColor = 0xFF131B2E;     // Glass Navy
+        int borderColor = 0xFF4338CA;     // Indigo Glow Border
+        int redGlowAccent = 0xFFEF4444;   // Glowing Meteor Red
+        int purpleAccent = 0xFF8B5CF6;    // Nebula Purple
         int textColor = 0xFFFFFFFF;
         int secondaryColor = 0xFF94A3B8;
 
         ScrollView scrollView = new ScrollView(this);
-        scrollView.setBackgroundColor(0xFF0F172A); // Dark slate background
+        scrollView.setBackgroundColor(spaceBgColor);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -41,14 +42,14 @@ public final class DynamicLabelsActivity extends Activity {
 
         // Header Title
         TextView title = new TextView(this);
-        title.setText("تخصيص قائمة الجمل والإعدادات المحظورة");
+        title.setText("تخصيص قائمة الجمل والكلمات المحظورة — Vx");
         title.setTextSize(20f);
         title.setTypeface(null, Typeface.BOLD);
-        title.setTextColor(textColor);
+        title.setTextColor(redGlowAccent);
         root.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
         TextView help = new TextView(this);
-        help.setText("أدخل كل جملة أو عنوان إعداد في سطر مستقل لحظره تلقائياً عند الاكتشاف.");
+        help.setText("أدخل كل جملة أو عنوان إعداد في سطر مستقل لحظره تلقائياً فور الاكتشاف.");
         help.setTextSize(13f);
         help.setTextColor(secondaryColor);
         LinearLayout.LayoutParams helpParams = new LinearLayout.LayoutParams(-1, -2);
@@ -63,7 +64,7 @@ public final class DynamicLabelsActivity extends Activity {
         GradientDrawable cardBg = new GradientDrawable();
         cardBg.setColor(cardBgColor);
         cardBg.setCornerRadius(dp(16));
-        cardBg.setStroke(dp(1), borderColor);
+        cardBg.setStroke(dp(2), borderColor);
         card.setBackground(cardBg);
 
         editor = new EditText(this);
@@ -89,7 +90,7 @@ public final class DynamicLabelsActivity extends Activity {
         save.setTextSize(15f);
         save.setTextColor(textColor);
         save.setTypeface(null, Typeface.BOLD);
-        save.setBackground(createButtonBg(primaryAccent, dp(12)));
+        save.setBackground(createButtonBg(redGlowAccent, dp(12)));
 
         LinearLayout.LayoutParams saveParams = new LinearLayout.LayoutParams(-1, dp(48));
         saveParams.setMargins(0, 0, 0, dp(12));
@@ -101,7 +102,7 @@ public final class DynamicLabelsActivity extends Activity {
         reset.setAllCaps(false);
         reset.setTextSize(14f);
         reset.setTextColor(textColor);
-        reset.setBackground(createButtonBg(0xFF374151, dp(12)));
+        reset.setBackground(createButtonBg(0xFF1F2937, dp(12)));
 
         LinearLayout.LayoutParams resetParams = new LinearLayout.LayoutParams(-1, dp(44));
         root.addView(reset, resetParams);

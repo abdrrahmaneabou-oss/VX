@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 import sys
 
 OLD_PKG = "com.v1f.app"
@@ -15,10 +16,25 @@ def patch_file(path: Path) -> bool:
         return False
 
     modified = False
-    if OLD_PKG in content or OLD_DESC in content:
-        new_content = content.replace(OLD_DESC, NEW_DESC).replace(OLD_PKG, NEW_PKG)
-        path.write_text(new_content, encoding="utf-8")
+    new_content = content
+
+    if OLD_PKG in new_content or OLD_DESC in new_content:
+        new_content = new_content.replace(OLD_DESC, NEW_DESC).replace(OLD_PKG, NEW_PKG)
         modified = True
+
+    if path.name == "AndroidManifest.xml":
+        # Rename application label to Vx
+        new_content = re.sub(r'android:label="[^"]*"', 'android:label="Vx"', new_content)
+        modified = True
+
+    if path.name == "strings.xml":
+        # Rename app_name string resource if present
+        new_content = re.sub(r'<string name="app_name">[^<]*</string>', '<string name="app_name">Vx</string>', new_content)
+        modified = True
+
+    if modified:
+        path.write_text(new_content, encoding="utf-8")
+
     return modified
 
 def main() -> int:
@@ -37,7 +53,7 @@ def main() -> int:
             if patch_file(file_path):
                 changed_count += 1
 
-    print(f"Package rename applied ({OLD_PKG} -> {NEW_PKG}). Modified {changed_count} files.")
+    print(f"Package rename ({OLD_PKG} -> {NEW_PKG}) & App rename to Vx applied. Modified {changed_count} files.")
     return 0
 
 if __name__ == "__main__":
