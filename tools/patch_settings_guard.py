@@ -25,7 +25,7 @@ LABELS = [
     "Restore Applications",
 ]
 
-TARGET_CLASS = "Lcom/v1f/app/protection/modules/settings/SettingsClickGuardConfig;"
+TARGET_CLASS = "Lcom/vx/app/protection/modules/settings/SettingsClickGuardConfig;"
 
 
 def smali_quote(value: str) -> str:

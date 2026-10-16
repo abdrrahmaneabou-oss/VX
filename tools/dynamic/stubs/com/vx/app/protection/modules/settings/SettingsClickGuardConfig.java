@@ -1,4 +1,4 @@
-package com.v1f.app.protection.modules.settings;
+package com.vx.app.protection.modules.settings;
 
 import java.util.Set;
 

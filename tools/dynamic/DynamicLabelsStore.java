@@ -1,4 +1,4 @@
-package com.v1f.app.patch;
+package com.vx.app.patch;
 
 import android.content.Context;
 import android.content.SharedPreferences;

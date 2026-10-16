@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 import sys
 
-TARGET = "Lcom/v1f/app/protection/modules/settings/SettingsClickGuardConfig;->blockedLabels:Ljava/util/Set;"
+TARGET = "Lcom/vx/app/protection/modules/settings/SettingsClickGuardConfig;->blockedLabels:Ljava/util/Set;"
 
 
 def patch(path: Path) -> None:

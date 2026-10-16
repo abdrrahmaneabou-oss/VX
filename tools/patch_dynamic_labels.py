@@ -3,11 +3,11 @@ from pathlib import Path
 import re
 import sys
 
-ACTIVITY = "com.v1f.app.patch.DynamicLabelsActivity"
-STORE = "Lcom/v1f/app/patch/DynamicLabelsStore;"
-ROBUST_GUARD = "Lcom/v1f/app/patch/RobustSettingsGuard;"
-GUARD_CONFIG = "Lcom/v1f/app/protection/modules/settings/SettingsClickGuardConfig;"
-DETECTOR = "Lcom/v1f/app/protection/modules/settings/SettingsClickDetector;"
+ACTIVITY = "com.vx.app.patch.DynamicLabelsActivity"
+STORE = "Lcom/vx/app/patch/DynamicLabelsStore;"
+ROBUST_GUARD = "Lcom/vx/app/patch/RobustSettingsGuard;"
+GUARD_CONFIG = "Lcom/vx/app/protection/modules/settings/SettingsClickGuardConfig;"
+DETECTOR = "Lcom/vx/app/protection/modules/settings/SettingsClickDetector;"
 
 
 def find_class(root: Path, filename: str, descriptor: str) -> Path:
@@ -27,7 +27,7 @@ def patch_manifest(root: Path) -> None:
         return
     line = (
         '        <activity android:exported="false" '
-        'android:name="com.v1f.app.patch.DynamicLabelsActivity" '
+        'android:name="com.vx.app.patch.DynamicLabelsActivity" '
         'android:screenOrientation="portrait" '
         'android:theme="@style/Theme.V1F.Duration"/>\n'
     )
@@ -53,7 +53,7 @@ def patch_application(root: Path) -> None:
     pos = body.rfind(marker)
     if pos < 0:
         raise RuntimeError("No return-void in V1FApplication.onCreate")
-    injection = "    invoke-static {p0}, Lcom/v1f/app/patch/DynamicLabelsStore;->init(Landroid/content/Context;)V\n\n"
+    injection = "    invoke-static {p0}, Lcom/vx/app/patch/DynamicLabelsStore;->init(Landroid/content/Context;)V\n\n"
     body = body[:pos] + injection + body[pos:]
     replacement = ".method public onCreate()V\n" + body + ".end method"
     text = text[:method.start()] + replacement + text[method.end():]
@@ -63,7 +63,7 @@ def patch_application(root: Path) -> None:
 def patch_main_activity(root: Path) -> None:
     matches = [
         p for p in root.rglob("MainActivity.smali")
-        if "Lcom/v1f/app/MainActivity;" in p.read_text(encoding="utf-8", errors="ignore")
+        if "Lcom/vx/app/MainActivity;" in p.read_text(encoding="utf-8", errors="ignore")
     ]
     if len(matches) != 1:
         raise RuntimeError(f"Expected one MainActivity.smali, found {len(matches)}")
@@ -71,10 +71,10 @@ def patch_main_activity(root: Path) -> None:
     text = path.read_text(encoding="utf-8")
     if "DynamicLabelsEntry;->attach" in text:
         return
-    needle = "    invoke-static {p0}, Lcom/v1f/app/patch/BreakRuntime;->attachStatus(Landroid/app/Activity;)V"
+    needle = "    invoke-static {p0}, Lcom/vx/app/patch/BreakRuntime;->attachStatus(Landroid/app/Activity;)V"
     if needle not in text:
         raise RuntimeError("BreakRuntime.attachStatus hook not found in MainActivity")
-    injection = "    invoke-static {p0}, Lcom/v1f/app/patch/DynamicLabelsEntry;->attach(Landroid/app/Activity;)V\n\n"
+    injection = "    invoke-static {p0}, Lcom/vx/app/patch/DynamicLabelsEntry;->attach(Landroid/app/Activity;)V\n\n"
     text = text.replace(needle, injection + needle, 1)
     path.write_text(text, encoding="utf-8")
 
@@ -94,7 +94,7 @@ def patch_guard_config(root: Path) -> None:
     replacement = (
         method.group("head")
         + "    .locals 1\n\n"
-        + "    invoke-static {}, Lcom/v1f/app/patch/DynamicLabelsStore;->snapshot()Ljava/util/Set;\n\n"
+        + "    invoke-static {}, Lcom/vx/app/patch/DynamicLabelsStore;->snapshot()Ljava/util/Set;\n\n"
         + "    move-result-object v0\n\n"
         + "    return-object v0\n"
         + ".end method"
@@ -125,7 +125,7 @@ def patch_detector(root: Path) -> None:
     # range form to safely pass adjacent parameter registers regardless of the
     # method's local-register count.
     injection = (
-        "    invoke-static/range {p1 .. p2}, Lcom/v1f/app/patch/RobustSettingsGuard;->detect("
+        "    invoke-static/range {p1 .. p2}, Lcom/vx/app/patch/RobustSettingsGuard;->detect("
         "Landroid/view/accessibility/AccessibilityEvent;Ljava/lang/String;)Ljava/lang/String;\n\n"
         "    move-result-object v0\n\n"
         "    if-eqz v0, :v2f_original_settings_detector\n\n"
