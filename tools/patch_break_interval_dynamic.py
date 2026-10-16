@@ -5,8 +5,8 @@ import re
 import sys
 
 TARGET_CLASS = "Lcom/v1f/app/patch/BreakRules;"
-INTERVAL_HEX = "0x5265c00"  # 86,400,000 ms (24 hours)
-INTERVAL_DECIMAL = "86400000"
+INTERVAL_HEX = "0x2932e00"  # 43,200,000 ms (12 hours; the approved APK base literal)
+INTERVAL_DECIMAL = "43200000"
 STORE = "Lcom/v1f/app/patch/BreakIntervalStore;"
 
 
@@ -50,9 +50,9 @@ def main() -> int:
             for number, line in enumerate(other.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
                 if "86400000" in line or "5265c00" in line.lower():
                     print(f"{other}:{number}: {line}", file=sys.stderr)
-        raise RuntimeError("Could not find the 24-hour literal; diagnostics above identify the actual bytecode representation.")
+        raise RuntimeError("Could not find the approved APK interval literal; diagnostics above identify the actual bytecode representation.")
     if INTERVAL_HEX.lower() in patched.lower() or re.search(r"(?<!\d)86400000(?!\d)", patched):
-        raise RuntimeError("A fixed 24-hour interval literal remains in BreakRules")
+        raise RuntimeError("The fixed interval literal remains in BreakRules")
 
     path.write_text(patched, encoding="utf-8")
     print(f"Patched {path}: {count} fixed 24-hour reference(s) now use {STORE}->getIntervalMs()J")
