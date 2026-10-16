@@ -3,10 +3,10 @@ from pathlib import Path
 import re
 import sys
 
-CONFIG_CLASS = "Lcom/v1f/app/protection/modules/settings/SettingsClickGuardConfig;"
-DETECTOR_CLASS = "Lcom/v1f/app/protection/modules/settings/SettingsClickDetector;"
-STORE_CLASS = "Lcom/v1f/app/patch/DynamicLabelsStore;"
-ROBUST_CLASS = "Lcom/v1f/app/patch/RobustSettingsGuard;"
+CONFIG_CLASS = "Lcom/vx/app/protection/modules/settings/SettingsClickGuardConfig;"
+DETECTOR_CLASS = "Lcom/vx/app/protection/modules/settings/SettingsClickDetector;"
+STORE_CLASS = "Lcom/vx/app/patch/DynamicLabelsStore;"
+ROBUST_CLASS = "Lcom/vx/app/patch/RobustSettingsGuard;"
 
 
 def find_one(root: Path, name: str, marker: str) -> Path:

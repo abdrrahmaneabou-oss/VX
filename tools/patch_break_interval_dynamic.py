@@ -3,9 +3,9 @@ from pathlib import Path
 import re
 import sys
 
-BREAK_RULES = "Lcom/v1f/app/patch/BreakRules;"
-STORE = "Lcom/v1f/app/patch/BreakIntervalStore;"
-ENTRY = "Lcom/v1f/app/patch/BreakIntervalEntry;"
+BREAK_RULES = "Lcom/vx/app/patch/BreakRules;"
+STORE = "Lcom/vx/app/patch/BreakIntervalStore;"
+ENTRY = "Lcom/vx/app/patch/BreakIntervalEntry;"
 KNOWN_STATIC_MS = {43_200_000, 86_400_000}  # current 12h build and original 24h build
 
 
@@ -72,7 +72,7 @@ def patch_break_rules(root: Path) -> None:
 
 
 def patch_application(root: Path) -> None:
-    path = find_class(root, "V1FApplication.smali", "Lcom/v1f/app/V1FApplication;")
+    path = find_class(root, "V1FApplication.smali", "Lcom/vx/app/V1FApplication;")
     text = path.read_text(encoding="utf-8")
     marker = f"{STORE}->init(Landroid/content/Context;)V"
     if marker in text:
@@ -93,7 +93,7 @@ def patch_application(root: Path) -> None:
 
 
 def patch_main_activity(root: Path) -> None:
-    path = find_class(root, "MainActivity.smali", "Lcom/v1f/app/MainActivity;")
+    path = find_class(root, "MainActivity.smali", "Lcom/vx/app/MainActivity;")
     text = path.read_text(encoding="utf-8")
     marker = f"{ENTRY}->attach(Landroid/app/Activity;)V"
     if marker in text:
@@ -101,7 +101,7 @@ def patch_main_activity(root: Path) -> None:
 
     labels_hook = (
         "    invoke-static {p0}, "
-        "Lcom/v1f/app/patch/DynamicLabelsEntry;->attach(Landroid/app/Activity;)V"
+        "Lcom/vx/app/patch/DynamicLabelsEntry;->attach(Landroid/app/Activity;)V"
     )
     if labels_hook not in text:
         raise RuntimeError("DynamicLabelsEntry.attach hook not found in MainActivity")

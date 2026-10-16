@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 import sys
 
-TARGET_CLASS = "Lcom/v1f/app/patch/BreakRules;"
+TARGET_CLASS = "Lcom/vx/app/patch/BreakRules;"
 OLD_MS = 86_400_000
 NEW_MS = 43_200_000
 OLD_HEX = f"0x{OLD_MS:x}"

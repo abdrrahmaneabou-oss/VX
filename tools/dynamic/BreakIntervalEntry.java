@@ -1,4 +1,4 @@
-package com.v1f.app.patch;
+package com.vx.app.patch;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -35,6 +35,7 @@ public final class BreakIntervalEntry {
 
             // Scrollable Root Container
             ScrollView scrollView = new ScrollView(activity);
+            scrollView.setBackgroundColor(0xFF0F172A); // Solid Dark Slate Background
             scrollView.setOutlineProvider(null);
             scrollView.setVerticalScrollBarEnabled(false);
 
@@ -66,7 +67,7 @@ public final class BreakIntervalEntry {
                     "تحديد التطبيقات المراد حظرها لمنع التشتت",
                     "فتح قائمة التطبيقات",
                     accentBlue,
-                    v -> openScreen(activity, "com.v1f.app.selection.AppSelectionActivity")
+                    v -> openScreen(activity, "com.vx.app.selection.AppSelectionActivity")
             ));
 
             // Card 2: اختيار المواقع المحظورة
@@ -75,7 +76,7 @@ public final class BreakIntervalEntry {
                     "تحديد النطاقات والمواقع الإلكترونية المحظورة",
                     "فتح قائمة المواقع",
                     accentGreen,
-                    v -> openScreen(activity, "com.v1f.app.selection.WebsiteSelectionActivity")
+                    v -> openScreen(activity, "com.vx.app.selection.WebsiteSelectionActivity")
             ));
 
             // Card 3: اختيار الجمل والكلمات والإعدادات المحظورة
@@ -93,7 +94,7 @@ public final class BreakIntervalEntry {
                     "تحديد الوقت والمؤقت لبدء جلسة الحظر الصارم مباشرة",
                     "بدء/تحديد مؤقت الحظر",
                     accentOrange,
-                    v -> openScreen(activity, "com.v1f.app.patch.DurationActivity")
+                    v -> openScreen(activity, "com.vx.app.patch.DurationActivity")
             ));
 
             // Card 5: اختيار الفترة بين استراحات 1 دقيقة
@@ -243,7 +244,6 @@ public final class BreakIntervalEntry {
             Intent intent = new Intent(activity, Class.forName(className));
             activity.startActivity(intent);
         } catch (Throwable t) {
-            // Fallback launch attempt or notification
             try {
                 Intent intent = new Intent();
                 intent.setClassName(activity.getPackageName(), className);
