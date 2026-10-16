@@ -1,13 +1,18 @@
 package com.v1f.app.patch;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,74 +23,149 @@ public final class BreakIntervalEntry {
         try {
             final int[] hours = new int[] { BreakIntervalStore.getHours() };
 
-            LinearLayout card = new LinearLayout(activity);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(dp(activity, 14), dp(activity, 12), dp(activity, 14), dp(activity, 12));
-            card.setElevation(dp(activity, 8));
+            // Primary Colors for Dark Theme / Material UI
+            int cardBgColor = 0xFF1E2638; // Dark Slate Blue
+            int cardBorderColor = 0xFF334155;
+            int accentBlue = 0xFF3B82F6;
+            int accentGreen = 0xFF10B981;
+            int accentPurple = 0xFF8B5CF6;
+            int accentOrange = 0xFFF59E0B;
+            int textColor = 0xFFFFFFFF;
+            int secondaryColor = 0xFF94A3B8;
 
-            GradientDrawable background = new GradientDrawable();
-            background.setColor(resolveColor(activity, android.R.attr.colorBackground, 0xff202124));
-            background.setCornerRadius(dp(activity, 16));
-            background.setStroke(dp(activity, 1), resolveColor(activity, android.R.attr.textColorSecondary, 0xff777777));
-            card.setBackground(background);
+            // Scrollable Root Container
+            ScrollView scrollView = new ScrollView(activity);
+            scrollView.setOutlineProvider(null);
+            scrollView.setVerticalScrollBarEnabled(false);
 
-            int textColor = resolveColor(activity, android.R.attr.textColorPrimary, 0xffffffff);
-            int secondaryColor = resolveColor(activity, android.R.attr.textColorSecondary, 0xffb0b0b0);
+            LinearLayout container = new LinearLayout(activity);
+            container.setOrientation(LinearLayout.VERTICAL);
+            int p = dp(activity, 16);
+            container.setPadding(p, p, p, dp(activity, 40));
 
-            TextView title = new TextView(activity);
-            title.setText("فترة فتح القفل التلقائي");
-            title.setTextSize(17f);
-            title.setTextColor(textColor);
-            title.setGravity(Gravity.CENTER);
-            card.addView(title, new LinearLayout.LayoutParams(-1, -2));
+            // Dashboard Header
+            TextView headerTitle = new TextView(activity);
+            headerTitle.setText("مركز التحكم باللوحة الرئيسية");
+            headerTitle.setTextSize(20f);
+            headerTitle.setTypeface(null, Typeface.BOLD);
+            headerTitle.setTextColor(textColor);
+            headerTitle.setGravity(Gravity.START);
+            container.addView(headerTitle, new LinearLayout.LayoutParams(-1, -2));
 
-            TextView hint = new TextView(activity);
-            hint.setText("مدة الفتح ثابتة: دقيقة واحدة");
-            hint.setTextSize(12f);
-            hint.setTextColor(secondaryColor);
-            hint.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams hintParams = new LinearLayout.LayoutParams(-1, -2);
-            hintParams.setMargins(0, dp(activity, 2), 0, dp(activity, 6));
-            card.addView(hint, hintParams);
+            TextView headerSub = new TextView(activity);
+            headerSub.setText("تخصيص قواعد الحظر، الجمل، المواقع، والفترات الصارمة");
+            headerSub.setTextSize(13f);
+            headerSub.setTextColor(secondaryColor);
+            LinearLayout.LayoutParams subParams = new LinearLayout.LayoutParams(-1, -2);
+            subParams.setMargins(0, dp(activity, 4), 0, dp(activity, 16));
+            container.addView(headerSub, subParams);
 
+            // Card 1: اختيار التطبيقات المحظورة
+            container.addView(createCard(activity,
+                    "اختيار التطبيقات",
+                    "تحديد التطبيقات المراد حظرها لمنع التشتت",
+                    "فتح قائمة التطبيقات",
+                    accentBlue,
+                    v -> openScreen(activity, "com.v1f.app.selection.AppSelectionActivity")
+            ));
+
+            // Card 2: اختيار المواقع المحظورة
+            container.addView(createCard(activity,
+                    "اختيار المواقع",
+                    "تحديد النطاقات والمواقع الإلكترونية المحظورة",
+                    "فتح قائمة المواقع",
+                    accentGreen,
+                    v -> openScreen(activity, "com.v1f.app.selection.WebsiteSelectionActivity")
+            ));
+
+            // Card 3: اختيار الجمل والكلمات والإعدادات المحظورة
+            container.addView(createCard(activity,
+                    "الجمل والإعدادات المحظورة",
+                    "إدارة الكلمات والجمل وعناوين الإعدادات المحظورة ديناميكياً",
+                    "تعديل قائمة الجمل",
+                    accentPurple,
+                    v -> activity.startActivity(new Intent(activity, DynamicLabelsActivity.class))
+            ));
+
+            // Card 4: اختيار مدة الحظر الصارم (مباشرة من الرئيسية)
+            container.addView(createCard(activity,
+                    "مدة الحظر الصارم",
+                    "تحديد الوقت والمؤقت لبدء جلسة الحظر الصارم مباشرة",
+                    "بدء/تحديد مؤقت الحظر",
+                    accentOrange,
+                    v -> openScreen(activity, "com.v1f.app.patch.DurationActivity")
+            ));
+
+            // Card 5: اختيار الفترة بين استراحات 1 دقيقة
+            LinearLayout breakCard = new LinearLayout(activity);
+            breakCard.setOrientation(LinearLayout.VERTICAL);
+            breakCard.setPadding(dp(activity, 16), dp(activity, 16), dp(activity, 16), dp(activity, 16));
+
+            GradientDrawable breakBg = new GradientDrawable();
+            breakBg.setColor(cardBgColor);
+            breakBg.setCornerRadius(dp(activity, 16));
+            breakBg.setStroke(dp(activity, 1), cardBorderColor);
+            breakCard.setBackground(breakBg);
+
+            TextView breakTitle = new TextView(activity);
+            breakTitle.setText("الفترة بين استراحات (1 دقيقة)");
+            breakTitle.setTextSize(16f);
+            breakTitle.setTypeface(null, Typeface.BOLD);
+            breakTitle.setTextColor(textColor);
+            breakCard.addView(breakTitle, new LinearLayout.LayoutParams(-1, -2));
+
+            TextView breakDesc = new TextView(activity);
+            breakDesc.setText("تحديد تكرار الاستراحة التلقائية. مدة فتح القفل ثابتة: دقيقة واحدة.");
+            breakDesc.setTextSize(12f);
+            breakDesc.setTextColor(secondaryColor);
+            LinearLayout.LayoutParams bDescParams = new LinearLayout.LayoutParams(-1, -2);
+            bDescParams.setMargins(0, dp(activity, 4), 0, dp(activity, 12));
+            breakCard.addView(breakDesc, bDescParams);
+
+            // Counter Row
             LinearLayout row = new LinearLayout(activity);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
 
             Button minus = new Button(activity);
             minus.setText("−");
-            minus.setTextSize(20f);
-            minus.setAllCaps(false);
-            row.addView(minus, new LinearLayout.LayoutParams(dp(activity, 58), -2));
+            minus.setTextSize(22f);
+            minus.setTextColor(textColor);
+            minus.setBackground(createButtonBg(0xFF374151, dp(activity, 10)));
+            row.addView(minus, new LinearLayout.LayoutParams(dp(activity, 52), dp(activity, 48)));
 
-            TextView value = new TextView(activity);
-            value.setTextSize(16f);
-            value.setTextColor(textColor);
-            value.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(0, -2, 1f);
-            valueParams.setMargins(dp(activity, 8), 0, dp(activity, 8), 0);
-            row.addView(value, valueParams);
+            TextView valueText = new TextView(activity);
+            valueText.setTextSize(16f);
+            valueText.setTypeface(null, Typeface.BOLD);
+            valueText.setTextColor(accentBlue);
+            valueText.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams valParams = new LinearLayout.LayoutParams(0, -2, 1f);
+            valParams.setMargins(dp(activity, 8), 0, dp(activity, 8), 0);
+            row.addView(valueText, valParams);
 
             Button plus = new Button(activity);
             plus.setText("+");
-            plus.setTextSize(20f);
-            plus.setAllCaps(false);
-            row.addView(plus, new LinearLayout.LayoutParams(dp(activity, 58), -2));
+            plus.setTextSize(22f);
+            plus.setTextColor(textColor);
+            plus.setBackground(createButtonBg(0xFF374151, dp(activity, 10)));
+            row.addView(plus, new LinearLayout.LayoutParams(dp(activity, 52), dp(activity, 48)));
 
-            card.addView(row, new LinearLayout.LayoutParams(dp(activity, 300), -2));
+            breakCard.addView(row, new LinearLayout.LayoutParams(-1, -2));
 
-            Runnable refresh = () -> {
+            Runnable refreshInterval = () -> {
                 hours[0] = Math.max(1, Math.min(24, hours[0]));
-                value.setText(formatInterval(hours[0]));
+                valueText.setText(formatInterval(hours[0]));
                 minus.setEnabled(hours[0] > 1);
                 plus.setEnabled(hours[0] < 24);
+                minus.setAlpha(hours[0] > 1 ? 1.0f : 0.4f);
+                plus.setAlpha(hours[0] < 24 ? 1.0f : 0.4f);
             };
 
             minus.setOnClickListener(v -> {
                 if (hours[0] <= 1) return;
                 hours[0]--;
                 BreakIntervalStore.setHours(activity, hours[0]);
-                refresh.run();
+                refreshInterval.run();
                 Toast.makeText(activity, "تم الحفظ: " + formatInterval(hours[0]), Toast.LENGTH_SHORT).show();
             });
 
@@ -93,23 +173,92 @@ public final class BreakIntervalEntry {
                 if (hours[0] >= 24) return;
                 hours[0]++;
                 BreakIntervalStore.setHours(activity, hours[0]);
-                refresh.run();
+                refreshInterval.run();
                 Toast.makeText(activity, "تم الحفظ: " + formatInterval(hours[0]), Toast.LENGTH_SHORT).show();
             });
 
-            refresh.run();
+            refreshInterval.run();
 
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-            int margin = dp(activity, 16);
-            params.setMargins(margin, margin, margin, dp(activity, 88));
-            activity.addContentView(card, params);
+            LinearLayout.LayoutParams breakCardParams = new LinearLayout.LayoutParams(-1, -2);
+            breakCardParams.setMargins(0, 0, 0, dp(activity, 16));
+            container.addView(breakCard, breakCardParams);
+
+            scrollView.addView(container, new ViewGroup.LayoutParams(-1, -2));
+
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(-1, -1);
+            activity.addContentView(scrollView, layoutParams);
+
         } catch (Throwable ignored) {
-            // Optional UI must never prevent MainActivity from opening.
+            // Overlay container safeguard
         }
+    }
+
+    private static View createCard(Activity activity, String title, String desc, String buttonText, int accentColor, View.OnClickListener listener) {
+        LinearLayout card = new LinearLayout(activity);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(activity, 16), dp(activity, 16), dp(activity, 16), dp(activity, 16));
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF1E2638);
+        bg.setCornerRadius(dp(activity, 16));
+        bg.setStroke(dp(activity, 1), 0xFF334155);
+        card.setBackground(bg);
+
+        TextView tvTitle = new TextView(activity);
+        tvTitle.setText(title);
+        tvTitle.setTextSize(16f);
+        tvTitle.setTypeface(null, Typeface.BOLD);
+        tvTitle.setTextColor(0xFFFFFFFF);
+        card.addView(tvTitle, new LinearLayout.LayoutParams(-1, -2));
+
+        TextView tvDesc = new TextView(activity);
+        tvDesc.setText(desc);
+        tvDesc.setTextSize(12f);
+        tvDesc.setTextColor(0xFF94A3B8);
+        LinearLayout.LayoutParams descParams = new LinearLayout.LayoutParams(-1, -2);
+        descParams.setMargins(0, dp(activity, 4), 0, dp(activity, 12));
+        card.addView(tvDesc, descParams);
+
+        Button btn = new Button(activity);
+        btn.setText(buttonText);
+        btn.setAllCaps(false);
+        btn.setTextSize(14f);
+        btn.setTextColor(0xFFFFFFFF);
+        btn.setTypeface(null, Typeface.BOLD);
+        btn.setBackground(createButtonBg(accentColor, dp(activity, 10)));
+        btn.setOnClickListener(listener);
+
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(-1, dp(activity, 44));
+        card.addView(btn, btnParams);
+
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
+        cardParams.setMargins(0, 0, 0, dp(activity, 16));
+        card.setLayoutParams(cardParams);
+
+        return card;
+    }
+
+    private static void openScreen(Activity activity, String className) {
+        try {
+            Intent intent = new Intent(activity, Class.forName(className));
+            activity.startActivity(intent);
+        } catch (Throwable t) {
+            // Fallback launch attempt or notification
+            try {
+                Intent intent = new Intent();
+                intent.setClassName(activity.getPackageName(), className);
+                activity.startActivity(intent);
+            } catch (Throwable ignored) {
+                Toast.makeText(activity, "تعذر فتح الشاشة المطلوبة", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private static GradientDrawable createButtonBg(int color, float radius) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(radius);
+        return drawable;
     }
 
     private static String formatInterval(int hours) {
@@ -121,18 +270,5 @@ public final class BreakIntervalEntry {
 
     private static int dp(Activity activity, int value) {
         return Math.round(value * activity.getResources().getDisplayMetrics().density);
-    }
-
-    private static int resolveColor(Activity activity, int attr, int fallback) {
-        TypedValue value = new TypedValue();
-        if (!activity.getTheme().resolveAttribute(attr, value, true)) return fallback;
-        if (value.type >= TypedValue.TYPE_FIRST_COLOR_INT && value.type <= TypedValue.TYPE_LAST_COLOR_INT) {
-            return value.data;
-        }
-        try {
-            return activity.getColor(value.resourceId);
-        } catch (Throwable ignored) {
-            return fallback;
-        }
     }
 }
