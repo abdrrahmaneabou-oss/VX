@@ -14,6 +14,7 @@ if [ ! -f "$APKTOOL" ]; then
 fi
 
 java -jar "$APKTOOL" d -f "$BASE_APK" -o "$ROOT"
+python3 tools/inspect_block_state.py "$ROOT"
 python3 tools/patch_dynamic_labels.py "$ROOT"
 python3 tools/patch_dynamic_guard.py "$ROOT"
 python3 tools/patch_break_interval_dynamic.py "$ROOT"
