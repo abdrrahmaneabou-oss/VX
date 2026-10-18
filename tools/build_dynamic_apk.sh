@@ -19,6 +19,7 @@ python3 tools/inspect_block_state.py "$ROOT"
 python3 tools/patch_dynamic_labels.py "$ROOT"
 python3 tools/patch_dynamic_guard.py "$ROOT"
 python3 tools/patch_break_interval_dynamic.py "$ROOT"
+python3 tools/patch_three_second_lock.py "$ROOT"
 bash tools/build_dynamic_dex.sh
 java -jar "$APKTOOL" b "$ROOT" -o build/V2F-unsigned.apk
 python3 tools/package_dynamic.py build/V2F-unsigned.apk build/classes15.dex
