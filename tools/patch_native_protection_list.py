@@ -41,8 +41,6 @@ def main(root):
     ]:
         label = ('invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->durationLabel()Ljava/lang/String;\n\n    move-result-object v7' if callback == "QuickDurationAction" else f'const-string v7, "{title}"')
         action_load = (
-            'move-object/from16 v8, p0\n    iget-object v8, v8, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onPrimaryAction:Lkotlin/jvm/functions/Function0;'
-            if callback == "QuickAppsAction" else
             'move-object/from16 v8, p0\n    iget-object v8, v8, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onOpenWebsites:Lkotlin/jvm/functions/Function0;'
             if callback == "QuickSitesAction" else
             f'sget-object v8, Lcom/v1f/app/patch/{callback};->INSTANCE:Lcom/v1f/app/patch/{callback};'
@@ -138,7 +136,7 @@ def main(root):
     return-object v0
 .end method
 ''')
-    for name, method in [("QuickDurationAction", "openDuration"), ("QuickPermissionsAction", "openPermissions")]:
+    for name, method in [("QuickDurationAction", "openDuration"), ("QuickPermissionsAction", "openPermissions"), ("QuickAppsAction", "openApplications")]:
         (p.parent / (name + ".smali")).write_text(f'''.class public final Lcom/v1f/app/patch/{name};
 .super Lkotlin/jvm/internal/Lambda;
 .implements Lkotlin/jvm/functions/Function0;
@@ -211,6 +209,16 @@ def main(root):
     sget-object v0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
     if-eqz v0, :done
     sget-object v1, Lcom/v1f/app/ui/V1FScreen;->Permissions:Lcom/v1f/app/ui/V1FScreen;
+    invoke-interface {v0, v1}, Landroidx/compose/runtime/MutableState;->setValue(Ljava/lang/Object;)V
+    :done
+    return-void
+.end method
+
+.method public static openApplications()V
+    .locals 2
+    sget-object v0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
+    if-eqz v0, :done
+    sget-object v1, Lcom/v1f/app/ui/V1FScreen;->Applications:Lcom/v1f/app/ui/V1FScreen;
     invoke-interface {v0, v1}, Landroidx/compose/runtime/MutableState;->setValue(Ljava/lang/Object;)V
     :done
     return-void
