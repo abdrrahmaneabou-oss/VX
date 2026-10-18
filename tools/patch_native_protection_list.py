@@ -40,9 +40,16 @@ def main(root):
         ("◎ اختيار المواقع", "QuickSitesAction"),
     ]:
         label = ('invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->durationLabel()Ljava/lang/String;\n\n    move-result-object v7' if callback == "QuickDurationAction" else f'const-string v7, "{title}"')
+        action_load = (
+            'iget-object v8, p0, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onPrimaryAction:Lkotlin/jvm/functions/Function0;'
+            if callback == "QuickAppsAction" else
+            'iget-object v8, p0, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onOpenWebsites:Lkotlin/jvm/functions/Function0;'
+            if callback == "QuickSitesAction" else
+            f'sget-object v8, Lcom/v1f/app/patch/{callback};->INSTANCE:Lcom/v1f/app/patch/{callback};'
+        )
         insert += f'''    {label}
 
-    sget-object v8, Lcom/v1f/app/patch/{callback};->INSTANCE:Lcom/v1f/app/patch/{callback};
+    {action_load}
 
     sget-object v9, Landroidx/compose/ui/Modifier;->Companion:Landroidx/compose/ui/Modifier$Companion;
     check-cast v9, Landroidx/compose/ui/Modifier;
@@ -90,6 +97,17 @@ def main(root):
 
 """
     s = s.replace(anchor, insert + anchor, 1)
+    # The original website shortcut was conditional on full permissions and
+    # appears after our independent cards. Suppress only that legacy shortcut;
+    # retain its Compose group start/end for a balanced composition.
+    legacy = '''    invoke-virtual {v4}, Lcom/v1f/app/model/PermissionSnapshot;->getAllReady()Z
+
+    move-result v4
+
+    if-eqz v4, :cond_6'''
+    if s.count(legacy) != 1:
+        raise RuntimeError("Legacy conditional website shortcut anchor changed")
+    s = s.replace(legacy, '    goto :cond_6', 1)
     p.write_text(s)
     callback = p.parent / 'ProtectionListAction.smali'
     callback.write_text('''.class public final Lcom/v1f/app/patch/ProtectionListAction;
