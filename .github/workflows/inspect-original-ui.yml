@@ -31,6 +31,13 @@ jobs:
           echo '=== ORIGINAL SCREEN COMPLETION METHODS ==='
           f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1$2.smali' | head -n1)
           grep -n -B 8 -A 35 'Lcom/v1f/app/ui/V1FScreen;->Timer\|Lcom/v1f/app/ui/V1FScreen;->Home' "$f" | tail -n 150 || true
+          echo '=== EXACT PRIMARY CALLBACK ==='
+          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1$2.smali' | head -n1)
+          sed -n '/^.method private static final invoke$lambda$3$lambda$2(/,/^.end method/p' "$f"
+          sed -n '/^.method private static final invoke$lambda$9$lambda$8(/,/^.end method/p' "$f"
+          echo '=== NAV CONSTRUCTOR ==='
+          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1.smali' | head -n1)
+          sed -n '/^.method constructor <init>(/,/^.end method/p' "$f" | tail -n 80
           exit 0
           echo '==== Accessibility service complete event method ===='
           f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
