@@ -16,6 +16,7 @@ public final class RandomFullBlock {
     private static String sessionId = "";
     private static long[] starts = new long[0];
     private static long lastElapsed = -1L;
+    private static Context appContext;
     private RandomFullBlock() {}
 
     private static Object call(Object target, String name) throws Exception {
@@ -29,7 +30,8 @@ public final class RandomFullBlock {
         return call(instance, "getSessionRepository");
     }
 
-    private static synchronized boolean windowActive(long elapsed, String id) {
+    private static synchronized boolean windowActive(Context context, long elapsed, String id) {
+        appContext = context.getApplicationContext();
         if (!id.equals(sessionId) || (lastElapsed >= 0 && elapsed + 120000L < lastElapsed)) {
             sessionId = id;
             starts = new long[0];
@@ -43,7 +45,14 @@ public final class RandomFullBlock {
             System.arraycopy(starts, 0, expanded, 0, starts.length);
             for (int i = starts.length; i < required; i++) {
                 // Minute 1..45 inclusive: 15 minutes finish by the hour boundary.
-                expanded[i] = (1 + RNG.nextInt(45)) * 60000L;
+                android.content.SharedPreferences prefs = appContext.getSharedPreferences("vx_random_full_block", Context.MODE_PRIVATE);
+                String key = id + ":hour:" + i;
+                int minute = prefs.getInt(key, -1);
+                if (minute < 1 || minute > 45) {
+                    minute = 1 + RNG.nextInt(45);
+                    prefs.edit().putInt(key, minute).apply();
+                }
+                expanded[i] = minute * 60000L;
             }
             starts = expanded;
         }
@@ -73,7 +82,7 @@ public final class RandomFullBlock {
             if (StrictBlockPolicy.allowsAll()) return false;
             String id = String.valueOf(call(session, "getId"));
             long elapsed = duration - remaining;
-            if (!windowActive(elapsed, id)) return false;
+            if (!windowActive(service, elapsed, id)) return false;
             PackageManager pm = service.getPackageManager();
             ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
             // Only apps installed by the user, including updated system apps.
@@ -90,7 +99,7 @@ public final class RandomFullBlock {
         }
     }
 
-    public static String status() {
+    public static String status(Context context) {
         try {
             Object repository = sessionRepository();
             Object session = call(call(repository, "getSession"), "getValue");
@@ -101,7 +110,7 @@ public final class RandomFullBlock {
             if (remaining <= 0) return "بانتظار بدء جلسة حظر";
             if (StrictBlockPolicy.allowsAll()) return "دقيقة الاستراحة — الحظر الشامل متوقف مؤقتاً";
             String id = String.valueOf(call(session, "getId"));
-            return windowActive(duration - remaining, id) ?
+            return windowActive(context, duration - remaining, id) ?
                     "● الحظر الشامل نشط الآن (15 دقيقة)" :
                     "● النظام العشوائي يعمل — موعد الحظر مخفي";
         } catch (Throwable ignored) {
