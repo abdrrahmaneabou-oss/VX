@@ -22,14 +22,14 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
-          echo '==== CELESTIAL METHOD HEADER ===='
-          f=$(find build/decompiled -name 'CelestialButtonKt.smali' | head -n1)
-          sed -n '1,235p' "$f" | tail -n 200
-          echo '==== CELESTIAL BRUSH COLOR SETUP ===='
-          sed -n '700,985p' "$f"
-          echo '==== HOME ACTION FIELDS ===='
-          f=$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)
-          sed -n '1,115p' "$f"
+          echo '==== SCREEN ENUM FIELDS ===='
+          f=$(find build/decompiled -name 'V1FScreen.smali' | head -n1)
+          grep -E '^.field public static final' "$f" || true
+          echo '==== NAVIGATION CALLBACKS ===='
+          grep -R -l '\$onPrimaryAction' build/decompiled/smali_classes11/com/v1f/app/ui/screens/HomeScreenKt* | head -n 8 || true
+          echo '==== V1F APP NAVIGATION ===='
+          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1.smali' | head -n1)
+          grep -n -B 7 -A 9 'V1FScreen;->' "$f" | head -n 155 || true
           exit 0
           echo '==== Accessibility service complete event method ===='
           f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
