@@ -24,6 +24,17 @@ public final class HomeCardState {
   public static String permissionLabel() {
     return "الصلاحيات";
   }
+  public static void refreshHome() {
+    Activity activity = DynamicLabelsEntry.getHost();
+    if (activity != null && !activity.isFinishing() && !activity.isDestroyed()) {
+      activity.runOnUiThread(new Runnable() {
+        @Override public void run() {
+          Activity host = DynamicLabelsEntry.getHost();
+          if (host != null && !host.isFinishing() && !host.isDestroyed()) host.recreate();
+        }
+      });
+    }
+  }
   public static String durationLabel() {
     Activity activity = DynamicLabelsEntry.getHost();
     if (activity == null) return "◷ مدة الحظر";
