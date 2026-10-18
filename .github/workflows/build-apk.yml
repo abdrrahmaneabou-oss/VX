@@ -83,14 +83,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo '===== MeteorShield-related files ====='
-          find build/decompiled/smali* -type f \\( -iname '*MeteorShield*' -o -iname '*AppBlockAccessibilityService*' -o -iname '*MeteorLockScreen*' \\) -print
-          while IFS= read -r file; do
-            echo "===== $file ====="
-            sed -n '1,1000p' "$file"
-          done < <(find build/decompiled/smali* -type f \\( -iname '*MeteorShield*' -o -iname '*AppBlockAccessibilityService*' -o -iname '*MeteorLockScreen*' \\))
-          echo '===== Overlay references / dismiss handlers ====='
-          grep -R -n -i -E -C 6 'MeteorShieldOverlay|MeteorShieldView|dismiss|عودة للصفحة الرئيسية|home' build/decompiled/smali* | head -n 1600 || true
+          echo '===== Relevant class files ====='
+          find build/decompiled/smali* -type f | grep -Ei '/(MeteorShield|AppBlockAccessibilityService|MeteorLockScreen)[^/]*$' || true
+          echo '===== Class-name and UI references ====='
+          grep -R -n -i -E -C 5 'MeteorShieldOverlay|MeteorShieldView|AppBlockAccessibilityService|MeteorLockScreen|عودة للصفحة الرئيسية' build/decompiled/smali* | head -n 2000 || true
+          echo '===== Likely lock/overlay files ====='
+          find build/decompiled/smali* -type f | grep -Ei '(lock|block|overlay|accessibility|shield)' | head -n 200 || true
 
       - name: Rebuild APK
         shell: bash
