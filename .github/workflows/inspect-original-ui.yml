@@ -22,15 +22,14 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
-          echo '==== PRIMARY HOME RENDER ===='
-          f=$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)
-          grep -n -B 90 -A 55 'CelestialButtonKt;->CelestialButton' "$f" | head -n 300
-          echo '==== CELESTIAL BUTTON DETAILS ===='
+          echo '==== CELESTIAL METHOD HEADER ===='
           f=$(find build/decompiled -name 'CelestialButtonKt.smali' | head -n1)
-          grep -n -B 14 -A 25 -E 'Brush|ColorKt|0xff|Gradient|isDestructive' "$f" | head -n 300
-          echo '==== APP ONRESUME ===='
-          f=$(find build/decompiled -name 'MainActivity.smali' | head -n1)
-          grep -n -A 35 '^.method protected onResume' "$f" | head -n 45 || true
+          sed -n '1,235p' "$f" | tail -n 200
+          echo '==== CELESTIAL BRUSH COLOR SETUP ===='
+          sed -n '700,985p' "$f"
+          echo '==== HOME ACTION FIELDS ===='
+          f=$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)
+          sed -n '1,115p' "$f"
           exit 0
           echo '==== Accessibility service complete event method ===='
           f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
