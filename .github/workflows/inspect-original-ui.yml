@@ -22,6 +22,8 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
+          echo '==== HomeScreen button sites ===='
+          grep -R -n -B 35 -A 20 'CompactGlassButtonKt;->CompactGlassButton\|CelestialButtonKt;->CelestialButton' build/decompiled/smali_classes11/com/v1f/app/ui/screens/HomeScreen* | head -n 330 || true
           echo '==== MainActivity methods ===='
           MAIN="$(find build/decompiled -name MainActivity.smali | head -n1)"
           grep -nE '^\.method|setContent|Composable|attachStatus|DynamicLabelsEntry' "$MAIN" | head -n 120
@@ -35,10 +37,10 @@ jobs:
           HOME="$(find build/decompiled -name HomeScreenKt.smali | head -n1)"
           grep -nE '^\\.method|CelestialButton|Scaffold|Column|Button|Text' "$HOME" | head -n 160
           echo '==== HomeScreen composable method beginning ===='
-          sed -n '/^.method public static final HomeScreen(/,/^.end method/p' "$HOME" | head -n 340
+          sed -n '/^.method public static final HomeScreen(/,/^.end method/p' "$HOME" | head -n 100 || true
           echo '==== V1FApp layout ===='
           APP="$(find build/decompiled -name 'V1FAppKt.smali' | head -n1)"
           grep -nE '^.method|HomeScreen|Scaffold|NavHost' "$APP" | head -n 110
           echo '==== Compose singleton root ===='
-          SING="$(find build/decompiled -name 'ComposableSingletons\\$MainActivityKt.smali' | head -n1)"
+          SING="$(find build/decompiled -name 'ComposableSingletons*MainActivityKt.smali' | head -n1)"
           test -z "$SING" || grep -nE 'HomeScreen|V1FApp|\\.method' "$SING" | head -n 90
