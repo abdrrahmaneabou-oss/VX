@@ -27,6 +27,10 @@ jobs:
           echo '==== Native insertion context ===='
           TARGET="$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)"
           sed -n '360,630p' "$TARGET"
+          echo '==== Permission gating references ===='
+          grep -R -n -E 'DeviceAdminManager;->|DevicePolicyManager;->isAdminActive|isAccessibilityServiceEnabled|isAccessibilityEnabled|allPermissionsGranted|allPermissions|permissionCount|PermissionStatus|hasAllPermissions' build/decompiled/smali_classes11/com/v1f/app 2>/dev/null | head -n 180 || true
+          echo '==== Permission classes ===='
+          find build/decompiled -iname '*Permission*.smali' -o -iname '*Setup*.smali' | head -n 85
           echo '==== MainActivity methods ===='
           MAIN="$(find build/decompiled -name MainActivity.smali | head -n1)"
           grep -nE '^\.method|setContent|Composable|attachStatus|DynamicLabelsEntry' "$MAIN" | head -n 120
