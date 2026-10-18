@@ -33,7 +33,7 @@ jobs:
           cat "$MAIN"
           echo '==== HomeScreen methods and UI call sites ===='
           HOME="$(find build/decompiled -name HomeScreenKt.smali | head -n1)"
-          grep -nE '^\\.method|CelestialButton|Scaffold|Column\\(|Button\\(|Text\\(' "$HOME" | head -n 160
+          grep -nE '^\\.method|CelestialButton|Scaffold|Column|Button|Text' "$HOME" | head -n 160
           echo '==== HomeScreen composable method beginning ===='
           sed -n '1,360p' "$HOME"
           echo '==== Compose singleton root ===='
