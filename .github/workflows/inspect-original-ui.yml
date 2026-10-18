@@ -27,6 +27,12 @@ jobs:
           echo '==== Native insertion context ===='
           TARGET="$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)"
           sed -n '360,630p' "$TARGET"
+          echo '==== PermissionSnapshot model ===='
+          cat build/decompiled/smali_classes9/com/v1f/app/model/PermissionSnapshot.smali | head -n 320
+          echo '==== PermissionRepository key methods ===='
+          grep -n -E '^.method|PermissionSnapshot;->|DevicePolicyManager|Accessibility' build/decompiled/smali_classes10/com/v1f/app/data/PermissionRepository.smali | head -n 180
+          echo '==== Screen gates ===='
+          grep -R -n 'PermissionSnapshot;->' build/decompiled/smali_classes{7,9,10,11}/com/v1f/app 2>/dev/null | head -n 125
           echo '==== Permission gating references ===='
           grep -R -n -E 'DeviceAdminManager;->|DevicePolicyManager;->isAdminActive|isAccessibilityServiceEnabled|isAccessibilityEnabled|allPermissionsGranted|allPermissions|permissionCount|PermissionStatus|hasAllPermissions' build/decompiled/smali_classes11/com/v1f/app 2>/dev/null | head -n 180 || true
           echo '==== Permission classes ===='
