@@ -22,14 +22,13 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
-          echo '==== HOME NAVIGATION ===='
-          find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' -exec sed -n '1,360p' {} \;
-          echo '==== HOME NAV CALLBACKS ===='
-          find build/decompiled -name 'HomeScreenKt*smali' | head -n 35
-          echo '==== ROUTES ===='
-          grep -R -n -E 'duration|apps|websites|app_selection|website_selection|Duration|AppSelection|WebsiteSelection' build/decompiled/smali_classes11/com/v1f/app/ui/navigation | head -n 100 || true
-          echo '==== NAV HOST ===='
-          find build/decompiled -name '*NavHost*smali' -o -name '*Navigation*smali' | grep 'com/v1f/app' | head -n 40
+          echo '==== MainActivity ===='
+          f=$(find build/decompiled -path '*/com/v1f/app/MainActivity.smali' | head -n1)
+          grep -nE '^.method|navigate|setContent|onCreate|HomeScreen|Duration|Selection' "$f" | head -n 120
+          echo '==== Navigation-related files ===='
+          find build/decompiled -path '*/com/v1f/app/*' -name '*.smali' | grep -E 'V1FApp|Navigation|NavGraph|MainActivity' | head -n 90
+          echo '==== Main UI callbacks ===='
+          for f in $(find build/decompiled -path '*/com/v1f/app/*' -name '*smali' | grep -E 'MainActivity|V1FApp' | head -n 16); do echo "$f"; grep -nE 'duration|Duration|app_selection|apps|websites|Websites|navigate|HomeScreen|AppSelection' "$f" | head -n 45; done
           exit 0
           echo '==== Accessibility service complete event method ===='
           f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
