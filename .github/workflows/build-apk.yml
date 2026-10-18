@@ -79,17 +79,6 @@ jobs:
           echo '===== Activities in manifest ====='
           grep -n -C 3 '<activity' build/decompiled/AndroidManifest.xml | head -n 220 || true
 
-      - name: Inspect lock screen UI implementation
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat build/decompiled/smali_classes11/com/v1f/app/ui/screens/MeteorLockScreenKt.smali
-          cat build/decompiled/smali_classes11/com/v1f/app/ui/screens/MeteorLockScreenKt\$\$ExternalSyntheticLambda0.smali
-          cat build/decompiled/smali_classes11/com/v1f/app/ui/screens/MeteorLockScreenKt\$\$ExternalSyntheticLambda1.smali
-          cat build/decompiled/smali_classes11/com/v1f/app/ui/screens/MeteorLockScreenKt\$\$ExternalSyntheticLambda2.smali
-          cat build/decompiled/smali_classes11/com/v1f/app/ui/screens/MeteorLockScreenKt\$MeteorLockScreen\$1\$1.smali
-          cat build/decompiled/smali_classes11/com/v1f/app/LockActivity.smali
-
       - name: Rebuild APK
         shell: bash
         run: |
