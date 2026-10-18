@@ -58,7 +58,7 @@ def main(root):
             'access$V1FApp$lambda$4(' not in callback_body or
             'DurationActivity;->open(' in callback_body):
         raise RuntimeError("Apps save/return-home invariants violated")
-    if 'move-object v4, v3\\n\\n' + invocation not in hs:
+    if 'move-object v4, v3\n\n' + invocation not in hs:
         raise RuntimeError("Permissions completion must reuse the back callback")
     host.write_text(hs)
 
