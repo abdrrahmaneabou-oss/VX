@@ -79,6 +79,16 @@ jobs:
           echo '===== Activities in manifest ====='
           grep -n -C 3 '<activity' build/decompiled/AndroidManifest.xml | head -n 220 || true
 
+      - name: Inspect lock UI classes for timed dismissal patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          for CLASS in MeteorShieldView MeteorShieldOverlay LockActivity; do
+            FILE="$(find build/decompiled -name "${CLASS}.smali" | head -n1)"
+            if [ -n "$FILE" ]; then echo "===== $FILE ====="; cat "$FILE"; fi
+          done
+          grep -R -l 'MeteorLockScreenKt' build/decompiled/smali* | while read -r FILE; do echo "===== $FILE ====="; cat "$FILE"; done
+
       - name: Rebuild APK
         shell: bash
         run: |
