@@ -79,6 +79,19 @@ jobs:
           echo '===== Activities in manifest ====='
           grep -n -C 3 '<activity' build/decompiled/AndroidManifest.xml | head -n 220 || true
 
+      - name: Inspect meteor shield overlay implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '===== MeteorShield-related files ====='
+          find build/decompiled/smali* -type f \\( -iname '*MeteorShield*' -o -iname '*AppBlockAccessibilityService*' -o -iname '*MeteorLockScreen*' \\) -print
+          while IFS= read -r file; do
+            echo "===== $file ====="
+            sed -n '1,1000p' "$file"
+          done < <(find build/decompiled/smali* -type f \\( -iname '*MeteorShield*' -o -iname '*AppBlockAccessibilityService*' -o -iname '*MeteorLockScreen*' \\))
+          echo '===== Overlay references / dismiss handlers ====='
+          grep -R -n -i -E -C 6 'MeteorShieldOverlay|MeteorShieldView|dismiss|عودة للصفحة الرئيسية|home' build/decompiled/smali* | head -n 1600 || true
+
       - name: Rebuild APK
         shell: bash
         run: |
