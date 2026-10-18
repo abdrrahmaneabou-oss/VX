@@ -22,17 +22,20 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
-          echo '==== ORIGINAL HOME BUTTON ===='
+          echo '==== HOME BUTTON LINES ===='
           f=$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)
-          sed -n '1,270p' "$f"
-          echo '==== DURATION SAVE AND START ===='
+          grep -n -B 30 -A 42 -E 'CelestialButtonKt;->CelestialButton|ابدأ إعداد الحماية|إعداد الحماية|PermissionSnapshot;->' "$f" | tail -n 190
+          echo '==== DURATION BUTTON ===='
           f=$(find build/decompiled -name 'DurationActivity.smali' | head -n1)
-          sed -n '390,455p' "$f"
-          sed -n '1250,1300p' "$f"
-          sed -n '1850,2180p' "$f" | grep -B 14 -A 24 -E 'startSession|savePreferences|setOnClickListener|start;|setText'
-          echo '==== PERMISSION SCREEN ENTRY ===='
+          grep -n -B 20 -A 23 -E 'بدء الحماية|ابدأ الحماية|startSession|lambda\\$5|savePreferences|v2f_duration' "$f" | tail -n 210
+          echo '==== DURATION START METHOD ===='
+          sed -n '/^.method private startSession()/,/^.end method/p' "$f" | head -n 190
+          echo '==== APP PRIMARY ACTION ===='
           f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1.smali' | head -n1)
-          grep -n -B 10 -A 20 'V1FScreen;->Permissions\|V1FScreen;->Duration' "$f" | head -n 130
+          grep -n -B 12 -A 20 -E 'V1FScreen;->Permissions|V1FScreen;->Duration' "$f" | head -n 130 || true
+          echo '==== PERMISSION SNAPSHOT ===='
+          f=$(find build/decompiled -name 'PermissionSnapshot.smali' | head -n1)
+          grep -n -E '^.method' "$f"
           exit 0
           echo '==== Accessibility service complete event method ===='
           f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
