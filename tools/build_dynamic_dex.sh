@@ -18,6 +18,7 @@ javac -source 8 -target 8 \
   tools/dynamic/DynamicLabelsStore.java \
   tools/dynamic/BreakIntervalStore.java \
   tools/dynamic/StrictBlockPolicy.java \
+  tools/dynamic/RandomFullBlock.java \
   tools/dynamic/DynamicLabelsActivity.java \
   tools/dynamic/DynamicLabelsEntry.java \
   tools/dynamic/RobustSettingsGuard.java
