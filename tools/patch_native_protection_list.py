@@ -41,6 +41,8 @@ def main(root):
     ]:
         label = ('invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->durationLabel()Ljava/lang/String;\n\n    move-result-object v7' if callback == "QuickDurationAction" else f'const-string v7, "{title}"')
         action_load = (
+            'move-object/from16 v8, p0\n    iget-object v8, v8, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onPrimaryAction:Lkotlin/jvm/functions/Function0;'
+            if callback == "QuickAppsAction" else
             'move-object/from16 v8, p0\n    iget-object v8, v8, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onOpenWebsites:Lkotlin/jvm/functions/Function0;'
             if callback == "QuickSitesAction" else
             f'sget-object v8, Lcom/v1f/app/patch/{callback};->INSTANCE:Lcom/v1f/app/patch/{callback};'
