@@ -41,7 +41,7 @@ def main(root):
     ]:
         label = ('invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->durationLabel()Ljava/lang/String;\n\n    move-result-object v7' if callback == "QuickDurationAction" else f'const-string v7, "{title}"')
         action_load = (
-            'move-object/from16 v8, p0\n    iget-object v8, v8, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onPrimaryAction:Lkotlin/jvm/functions/Function0;'
+            'move-object/from16 v8, p0\n    iget-object v8, v8, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onPrimaryAction:Lkotlin/jvm/functions/Function0;\n    new-instance v6, Lcom/v1f/app/patch/AppsCardAction;\n    invoke-direct {v6, v8}, Lcom/v1f/app/patch/AppsCardAction;-><init>(Lkotlin/jvm/functions/Function0;)V\n    move-object v8, v6'
             if callback == "QuickAppsAction" else
             'move-object/from16 v8, p0\n    iget-object v8, v8, Lcom/v1f/app/ui/screens/HomeScreenKt$HomeScreen$3$1$8;->$onOpenWebsites:Lkotlin/jvm/functions/Function0;'
             if callback == "QuickSitesAction" else
@@ -192,11 +192,34 @@ def main(root):
     return-object v0
 .end method
 """)
+    # Delegate to the device-proven Compose callback, but mark the Apps card
+    # origin so the primary callback can distinguish it from Permissions.
+    (p.parent / 'AppsCardAction.smali').write_text('''.class public final Lcom/v1f/app/patch/AppsCardAction;
+.super Lkotlin/jvm/internal/Lambda;
+.implements Lkotlin/jvm/functions/Function0;
+.field private final delegate:Lkotlin/jvm/functions/Function0;
+.method public constructor <init>(Lkotlin/jvm/functions/Function0;)V
+    .locals 1
+    const/4 v0, 0x0
+    invoke-direct {p0, v0}, Lkotlin/jvm/internal/Lambda;-><init>(I)V
+    iput-object p1, p0, Lcom/v1f/app/patch/AppsCardAction;->delegate:Lkotlin/jvm/functions/Function0;
+    return-void
+.end method
+.method public invoke()Ljava/lang/Object;
+    .locals 1
+    invoke-static {}, Lcom/v1f/app/patch/HomeQuickNav;->markAppsCard()V
+    iget-object v0, p0, Lcom/v1f/app/patch/AppsCardAction;->delegate:Lkotlin/jvm/functions/Function0;
+    invoke-interface {v0}, Lkotlin/jvm/functions/Function0;->invoke()Ljava/lang/Object;
+    move-result-object v0
+    return-object v0
+.end method
+''')
     nav = p.parent / 'HomeQuickNav.smali'
     nav.write_text('''.class public final Lcom/v1f/app/patch/HomeQuickNav;
 .super Ljava/lang/Object;
 
 .field private static screen:Landroidx/compose/runtime/MutableState;
+.field private static appsCardPending:Z
 .field private static selected:Landroidx/compose/runtime/MutableState;\n.field private static pendingStart:Z
 
 .method public static attach(Landroidx/compose/runtime/MutableState;Landroidx/compose/runtime/MutableState;)V
@@ -204,6 +227,21 @@ def main(root):
     sput-object p0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
     sput-object p1, Lcom/v1f/app/patch/HomeQuickNav;->selected:Landroidx/compose/runtime/MutableState;
     return-void
+.end method
+
+.method public static markAppsCard()V
+    .locals 1
+    const/4 v0, 0x1
+    sput-boolean v0, Lcom/v1f/app/patch/HomeQuickNav;->appsCardPending:Z
+    return-void
+.end method
+
+.method public static consumeAppsCard()Z
+    .locals 2
+    sget-boolean v0, Lcom/v1f/app/patch/HomeQuickNav;->appsCardPending:Z
+    const/4 v1, 0x0
+    sput-boolean v1, Lcom/v1f/app/patch/HomeQuickNav;->appsCardPending:Z
+    return v0
 .end method
 
 .method public static openPermissions()V
