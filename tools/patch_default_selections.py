@@ -18,7 +18,7 @@ section = data[start:end]
 needle = "    return-void"
 if section.count(needle) != 1:
     raise RuntimeError("Unexpected AppGraph.initialize return paths: " + str(section.count(needle)))
-section = section.replace(needle,
+section = section[:section.rfind(needle)] + (
     "    invoke-static {}, Lcom/v1f/app/patch/DefaultSelections;->apply()V\n\n" + needle)
 path.write_text(data[:start] + section + data[end:])
 print("One-time optional defaults hooked after AppGraph.initialize")
