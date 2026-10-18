@@ -22,6 +22,12 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
+          echo '==== RememberedApps class ===='
+          f=$(find build/decompiled -name 'RememberedApps.smali' | head -n1); echo "$f"; cat "$f" | head -n 280
+          echo '==== Selection screen remembered load context ===='
+          f=$(find build/decompiled -name 'AppSelectionScreenKt.smali' | head -n1); sed -n '665,755p' "$f"; sed -n '6750,6800p' "$f"
+          echo '==== AppGraph init ===='
+          f=$(find build/decompiled -name 'AppGraph.smali' | head -n1); sed -n '/^.method public final initialize(/,/^.end method/p' "$f" | head -n 210
           echo '==== Selection screen method identifiers ===='
           for n in AppSelectionScreenKt WebsiteSelectionScreenKt; do f=$(find build/decompiled -name "$n.smali" | head -n1); echo "$n"; grep -n -E '^.method|SharedPreferences|selected|Selected|startSession|toggle|Set;' "$f" | head -n 130; done
           echo '==== app selection prefs references ===='
