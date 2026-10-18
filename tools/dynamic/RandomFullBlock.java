@@ -98,7 +98,8 @@ public final class RandomFullBlock {
             starts = expanded;
         }
         long minuteInHour = elapsed % HOUR;
-        return starts[(int)index] >= 0 && minuteInHour >= starts[(int)index] &&\n                minuteInHour < starts[(int)index] + minutes * 60000L;
+        return starts[(int)index] >= 0 && minuteInHour >= starts[(int)index] &&
+                minuteInHour < starts[(int)index] + minutes * 60000L;
     }
 
     public static boolean shouldBlock(AccessibilityService service, AccessibilityEvent event) {
