@@ -88,6 +88,13 @@ jobs:
           echo '==== HOME BUTTON EXACT ORIGINAL REGISTER FLOW ===='
           TARGET="$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)"
           sed -n '235,380p' "$TARGET"
+          echo '==== FOCUSED NAVIGATION ===='
+          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1$2.smali' | head -n1)
+          sed -n '/^.method private static final invoke$lambda$3$lambda$2(/,/^.end method/p' "$f"
+          sed -n '/^.method private static final invoke$lambda$5$lambda$4(/,/^.end method/p' "$f"
+          sed -n '/^.method private static final invoke$lambda$9$lambda$8(/,/^.end method/p' "$f"
+          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1.smali' | head -n1)
+          sed -n '/^.method constructor <init>(/,/^.end method/p' "$f" | tail -n 90
           echo '==== Native insertion context ===='
           TARGET="$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)"
           sed -n '360,630p' "$TARGET"
