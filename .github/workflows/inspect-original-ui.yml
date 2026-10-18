@@ -27,6 +27,12 @@ jobs:
           echo '==== Native insertion context ===='
           TARGET="$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)"
           sed -n '360,630p' "$TARGET"
+          echo '==== Accessibility service methods ===='
+          grep -n -E '^.method|Block|Session|onAccessibilityEvent' build/decompiled/smali_classes*/com/v1f/app/service/AppBlockAccessibilityService.smali | head -n 130
+          echo '==== StrictBlockPolicy ===='
+          cat tools/dynamic/StrictBlockPolicy.java | head -n 160
+          echo '==== Session classes ===='
+          find build/decompiled -name '*Session*.smali' | grep 'com/v1f/app' | head -n 55
           echo '==== Readiness logic ===='
           sed -n '/^.method public final getAllReady()/,/^.end method/p' build/decompiled/smali_classes9/com/v1f/app/model/PermissionSnapshot.smali
           sed -n '/^.method public final getCompletedCount()/,/^.end method/p' build/decompiled/smali_classes9/com/v1f/app/model/PermissionSnapshot.smali
