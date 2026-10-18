@@ -161,13 +161,39 @@ def main(root):
 .super Ljava/lang/Object;
 
 .field private static screen:Landroidx/compose/runtime/MutableState;
-.field private static selected:Landroidx/compose/runtime/MutableState;
+.field private static selected:Landroidx/compose/runtime/MutableState;\n.field private static pendingStart:Z
 
 .method public static attach(Landroidx/compose/runtime/MutableState;Landroidx/compose/runtime/MutableState;)V
     .locals 0
     sput-object p0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
     sput-object p1, Lcom/v1f/app/patch/HomeQuickNav;->selected:Landroidx/compose/runtime/MutableState;
     return-void
+.end method
+
+.method public static openPermissions()V
+    .locals 2
+    sget-object v0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
+    if-eqz v0, :done
+    sget-object v1, Lcom/v1f/app/ui/V1FScreen;->Permissions:Lcom/v1f/app/ui/V1FScreen;
+    invoke-interface {v0, v1}, Landroidx/compose/runtime/MutableState;->setValue(Ljava/lang/Object;)V
+    :done
+    return-void
+.end method
+
+.method public static startProtection()V
+    .locals 1
+    const/4 v0, 0x1
+    sput-boolean v0, Lcom/v1f/app/patch/HomeQuickNav;->pendingStart:Z
+    invoke-static {}, Lcom/v1f/app/patch/HomeQuickNav;->openDuration()V
+    return-void
+.end method
+
+.method public static consumeStart()Z
+    .locals 2
+    sget-boolean v0, Lcom/v1f/app/patch/HomeQuickNav;->pendingStart:Z
+    const/4 v1, 0x0
+    sput-boolean v1, Lcom/v1f/app/patch/HomeQuickNav;->pendingStart:Z
+    return v0
 .end method
 
 .method public static openApplications()V
