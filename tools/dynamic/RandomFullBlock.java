@@ -8,10 +8,13 @@ import android.view.accessibility.AccessibilityEvent;
 import java.lang.reflect.Method;
 import java.security.SecureRandom;
 
-/** Hourly, session-bound random 15-minute block for user-installed apps. */
+/** Hourly, session-bound random configurable block for user-installed apps. */
 public final class RandomFullBlock {
     private static final long HOUR = 3600000L;
-    private static final long WINDOW = 900000L;
+    private static final int DEFAULT_MINUTES = 15;
+    private static final String PREFS = "vx_random_full_block";
+    private static final String KEY_MINUTES = "window_minutes";
+    private static int cachedMinutes = -1;
     private static final SecureRandom RNG = new SecureRandom();
     private static String sessionId = "";
     private static long[] starts = new long[0];
@@ -33,8 +36,24 @@ public final class RandomFullBlock {
         return call(instance, "getSessionRepository");
     }
 
+    public static int getMinutes(Context context) {
+        return Math.max(1, Math.min(45, context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_MINUTES, DEFAULT_MINUTES)));
+    }
+
+    public static int adjustMinutes(Context context, int delta) {
+        if (!StrictBlockPolicy.allowsAll()) return getMinutes(context);
+        int next = Math.max(1, Math.min(45, getMinutes(context) + delta));
+        context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_MINUTES, next).apply();
+        return next;
+    }
+
     private static synchronized boolean windowActive(Context context, long elapsed, String id) {
         appContext = context.getApplicationContext();
+        int minutes = getMinutes(context);
+        if (minutes != cachedMinutes) {
+            cachedMinutes = minutes;
+            starts = new long[0];
+        }
         if (!id.equals(sessionId) || (lastElapsed >= 0 && elapsed + 120000L < lastElapsed)) {
             sessionId = id;
             starts = new long[0];
@@ -47,12 +66,12 @@ public final class RandomFullBlock {
             long[] expanded = new long[required];
             System.arraycopy(starts, 0, expanded, 0, starts.length);
             for (int i = starts.length; i < required; i++) {
-                // Minute 1..45 inclusive: 15 minutes finish by the hour boundary.
-                android.content.SharedPreferences prefs = appContext.getSharedPreferences("vx_random_full_block", Context.MODE_PRIVATE);
-                String key = id + ":hour:" + i;
+                // Minute 1..(60-duration) inclusive: the entire window fits within the hour.
+                android.content.SharedPreferences prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                String key = id + ":minutes:" + minutes + ":hour:" + i;
                 int minute = prefs.getInt(key, -1);
-                if (minute < 1 || minute > 45) {
-                    minute = 1 + RNG.nextInt(45);
+                if (minute < 1 || minute > 60 - minutes) {
+                    minute = 1 + RNG.nextInt(60 - minutes);
                     prefs.edit().putInt(key, minute).apply();
                 }
                 expanded[i] = minute * 60000L;
@@ -60,7 +79,7 @@ public final class RandomFullBlock {
             starts = expanded;
         }
         long minuteInHour = elapsed % HOUR;
-        return minuteInHour >= starts[(int)index] && minuteInHour < starts[(int)index] + WINDOW;
+        return minuteInHour >= starts[(int)index] && minuteInHour < starts[(int)index] + minutes * 60000L;
     }
 
     public static boolean shouldBlock(AccessibilityService service, AccessibilityEvent event) {
@@ -106,7 +125,7 @@ public final class RandomFullBlock {
         }
     }
 
-    /** Catch apps already foreground when the 15-minute window starts. */
+    /** Catch apps already foreground when the random window starts. */
     public static synchronized void attach(final AccessibilityService service) {
         detach(service);
         pollHandler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -154,7 +173,7 @@ public final class RandomFullBlock {
             if (StrictBlockPolicy.allowsAll()) return "دقيقة الاستراحة — الحظر الشامل متوقف مؤقتاً";
             String id = String.valueOf(call(session, "getId"));
             return windowActive(context, duration - remaining, id) ?
-                    "● الحظر الشامل نشط الآن (15 دقيقة)" :
+                    "● الحظر الشامل نشط الآن (" + getMinutes(context) + " دقيقة)" :
                     "● النظام العشوائي يعمل — موعد الحظر مخفي";
         } catch (Throwable ignored) {
             return "يتفعّل تلقائياً عند حظر 24 ساعة أو أكثر";
