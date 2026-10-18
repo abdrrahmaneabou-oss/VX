@@ -22,17 +22,8 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
-          echo '==== NAV CALLBACK DEFINITIONS ===='
-          find build/decompiled -name 'V1FAppKt*.smali' | head -n 30
-          grep -R -n -B 12 -A 20 'PermissionsScreenKt;->PermissionsScreen\|AppSelectionScreenKt;->AppSelectionScreen\|WebsiteSelectionScreenKt;->WebsiteSelectionScreen' build/decompiled/smali_classes*/com/v1f/app/ui/V1FAppKt* | head -n 290 || true
-          echo '==== PERMISSION BUTTON LABELS ===='
-          grep -R -n -B 15 -A 15 'اختيار التطبيقات\|onContinue' build/decompiled/smali_classes*/com/v1f/app/ui/screens/PermissionsScreenKt* | head -n 110 || true
-          echo '==== APP SELECTION BUTTON LABELS ===='
-          f=$(find build/decompiled -name 'AppSelectionScreenKt.smali' | head -n1)
-          grep -n -B 15 -A 15 'CelestialButtonKt;->CelestialButton\|onContinue' "$f" | tail -n 180 || true
-          echo '==== WEBSITE SELECTION BUTTON LABELS ===='
-          f=$(find build/decompiled -name 'WebsiteSelectionScreenKt.smali' | head -n1)
-          grep -n -B 15 -A 15 'CelestialButtonKt;->CelestialButton\|onContinue' "$f" | tail -n 150 || true
+          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1$2.smali' | head -n1)
+          sed -n '1020,1480p' "$f"
           exit 0
           echo '==== Accessibility service complete event method ===='
           f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
