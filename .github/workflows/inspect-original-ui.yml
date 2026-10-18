@@ -22,6 +22,12 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
+          echo '==== App/site repository candidates ===='
+          find build/decompiled -path '*com/v1f/app*' -name '*.smali' | grep -Ei '(AppRepository|Website|SiteRepository|Domain|BlockedApp|BlockedSite|AppSelection|WebsiteSelection|Selection|Preferences)' | head -n 100
+          echo '==== App/site repository methods ===='
+          for f in $(find build/decompiled -path '*com/v1f/app*' -name '*.smali' | grep -Ei '(AppRepository|WebsiteRepository|SiteRepository|DomainRepository|AppSelection|WebsiteSelection)' | head -n 12); do echo "$f"; grep -n -E '^.method|\.field' "$f" | head -n 110; done
+          echo '==== Site and app data store references ===='
+          grep -R -n -E 'getBlockedApps|getBlockedSites|getSelectedApps|getSelectedSites|setBlockedApps|setBlockedSites|addBlocked|selectedApps|selectedSites' build/decompiled/smali_classes*/com/v1f/app/{data,model,ui} 2>/dev/null | head -n 95
           echo '==== Session model fields and getters ===='
           find build/decompiled -path '*/com/v1f/app/model/*Session*.smali' -print | head -n 15
           grep -R -n -E 'getEndsAt|getStart|endsAt|durationMillis|durationMinutes' build/decompiled/smali_classes*/com/v1f/app/model/*Session* 2>/dev/null | head -n 100
