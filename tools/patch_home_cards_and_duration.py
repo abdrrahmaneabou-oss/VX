@@ -17,6 +17,15 @@ def main(root):
     s = s.replace('const-string v0, "\\u0627\\u0628\\u062f\\u0623 \\u0625\\u0639\\u062f\\u0627\\u062f \\u0627\\u0644\\u062d\\u0645\\u0627\\u064a\\u0629"', 'invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->permissionLabel()Ljava/lang/String;\n\n    move-result-object v0')
     first = '    invoke-static/range {v7 .. v15}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton('
     if first not in s: raise RuntimeError("Primary button anchor missing")
+    # The CelestialButton 'strict' argument already paints a genuine red gradient.
+    # Override only that argument and clear its default bit (0x10), keeping
+    # the original onClick callback and every other button parameter intact.
+    s = s.replace(first, '''    invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->accessibilityReady()Z
+    move-result v11
+    xor-int/lit8 v11, v11, 0x1
+    const/16 v15, 0x2c
+
+''' + first, 1)
     # Preserve the original callback; it owns the existing permissions screen.
     # Do not overwrite the Compose register carrying the callback.
     # The previous build replaced v8 and caused a crash on tap.
