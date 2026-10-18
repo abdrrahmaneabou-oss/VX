@@ -22,6 +22,13 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
+          echo '==== Session model fields and getters ===='
+          find build/decompiled -path '*/com/v1f/app/model/*Session*.smali' -print | head -n 15
+          grep -R -n -E 'getEndsAt|getStart|endsAt|durationMillis|durationMinutes' build/decompiled/smali_classes*/com/v1f/app/model/*Session* 2>/dev/null | head -n 100
+          echo '==== BreakRuntime and BreakRules ===='
+          for f in $(find build/decompiled -name 'BreakRuntime.smali' -o -name 'BreakRules.smali'); do echo "$f"; grep -n -E '^.method|\.field|Session|elapsed|end|start|allowsAll' "$f" | head -n 120; done
+          echo '==== Accessibility event method ===='
+          sed -n '/^.method public onAccessibilityEvent(/,/^.end method/p' build/decompiled/smali_classes*/com/v1f/app/service/AppBlockAccessibilityService.smali | head -n 180
           echo '==== HomeScreen button sites ===='
           grep -R -n -B 35 -A 20 'CompactGlassButtonKt;->CompactGlassButton\|CelestialButtonKt;->CelestialButton' build/decompiled/smali_classes11/com/v1f/app/ui/screens/HomeScreen* | head -n 330 || true
           echo '==== Native insertion context ===='
