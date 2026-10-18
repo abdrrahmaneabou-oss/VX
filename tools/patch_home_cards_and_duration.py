@@ -46,6 +46,20 @@ def main(root):
     if hs.count(old_launch) != 1:
         raise RuntimeError("Apps completion legacy duration launch not found uniquely")
     hs = hs.replace(old_launch, '    # V2F_APPS_SAVE_RETURN_HOME: preserve selection and Home transition', 1)
+    # Fail closed if a future upstream APK changes the save callback. We must
+    # never silently remove its persistence or return-home operations.
+    callback_start = hs.find('.method private static final invoke$lambda$13$lambda$12(')
+    callback_end = hs.find('.end method', callback_start)
+    if callback_start < 0 or callback_end < 0:
+        raise RuntimeError("Apps completion callback not found")
+    callback_body = hs[callback_start:callback_end]
+    if ('access$V1FApp$lambda$7(' not in callback_body or
+            'V1FScreen;->Home:' not in callback_body or
+            'access$V1FApp$lambda$4(' not in callback_body or
+            'DurationActivity;->open(' in callback_body):
+        raise RuntimeError("Apps save/return-home invariants violated")
+    if 'move-object v4, v3\\n\\n' + invocation not in hs:
+        raise RuntimeError("Permissions completion must reuse the back callback")
     host.write_text(hs)
 
     duration = unique(root, 'DurationActivity.smali')
