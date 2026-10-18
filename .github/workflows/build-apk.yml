@@ -83,12 +83,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo '===== Relevant class files ====='
-          find build/decompiled/smali* -type f | grep -Ei '/(MeteorShield|AppBlockAccessibilityService|MeteorLockScreen)[^/]*$' || true
-          echo '===== Class-name and UI references ====='
-          grep -R -n -i -E -C 5 'MeteorShieldOverlay|MeteorShieldView|AppBlockAccessibilityService|MeteorLockScreen|عودة للصفحة الرئيسية' build/decompiled/smali* | head -n 2000 || true
-          echo '===== Likely lock/overlay files ====='
-          find build/decompiled/smali* -type f | grep -Ei '(lock|block|overlay|accessibility|shield)' | head -n 200 || true
+          cat build/decompiled/smali_classes11/com/v1f/app/protection/overlay/MeteorShieldOverlay.smali
+          cat build/decompiled/smali_classes11/com/v1f/app/protection/overlay/MeteorShieldView.smali
+          cat build/decompiled/smali_classes8/com/v1f/app/service/AppBlockAccessibilityService.smali
 
       - name: Rebuild APK
         shell: bash
