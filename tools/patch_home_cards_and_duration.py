@@ -31,6 +31,16 @@ def main(root):
     # The previous build replaced v8 and caused a crash on tap.
     home.write_text(s)
 
+    # Reuse the original Permissions onBack callback for its completion action.
+    # This removes the old Permissions -> Applications forced progression.
+    host = unique(root, 'V1FAppKt$V1FApp$2$1$2.smali')
+    hs = host.read_text()
+    invocation = '    invoke-static/range {v1 .. v8}, Lcom/v1f/app/ui/screens/PermissionsScreenKt;->PermissionsScreen('
+    if hs.count(invocation) != 1:
+        raise RuntimeError("Permissions screen callsite changed")
+    hs = hs.replace(invocation, '    move-object v4, v3\n\n' + invocation, 1)
+    host.write_text(hs)
+
     duration = unique(root, 'DurationActivity.smali')
     s = duration.read_text()
     callback = re.search(r'(?ms)^\.method synthetic lambda\$5\$com-v1f-app-patch-DurationActivity\(Landroid/view/View;\)V.*?^\.end method', s)
