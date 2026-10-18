@@ -16,7 +16,7 @@ def main(root):
     s = s.replace('const-string v0, "\\u0627\\u062e\\u062a\\u064a\\u0627\\u0631 \\u0627\\u0644\\u062a\\u0637\\u0628\\u064a\\u0642\\u0627\\u062a"', 'const-string v0, "الصلاحيات"')
     s = s.replace('const-string v0, "\\u0627\\u0628\\u062f\\u0623 \\u0625\\u0639\\u062f\\u0627\\u062f \\u0627\\u0644\\u062d\\u0645\\u0627\\u064a\\u0629"', 'const-string v0, "الصلاحيات"')
     first = '    invoke-static/range {v7 .. v15}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton('
-    if s.count(first) != 1: raise RuntimeError("Primary button anchor missing")
+    if first not in s: raise RuntimeError("Primary button anchor missing")
     s = s.replace(first, '    sget-object v8, Lcom/v1f/app/patch/QuickPermissionsAction;->INSTANCE:Lcom/v1f/app/patch/QuickPermissionsAction;\n\n' + first, 1)
     home.write_text(s)
 
