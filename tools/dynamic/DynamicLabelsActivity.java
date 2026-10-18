@@ -40,6 +40,13 @@ public final class DynamicLabelsActivity extends Activity {
     private boolean locked;
     private boolean restoringText;
     private String savedText = "";
+    private long saveFeedbackUntil;
+    private final Runnable clearSaveFeedback = new Runnable() {
+        @Override public void run() {
+            saveFeedbackUntil = 0L;
+            updateDirtyState();
+        }
+    };
     private final Runnable policyRefresh = new Runnable() {
         @Override public void run() {
             refreshPolicy();
@@ -194,6 +201,8 @@ public final class DynamicLabelsActivity extends Activity {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 if (restoringText) return;
                 updateCount();
+                saveFeedbackUntil = 0L;
+                handler.removeCallbacks(clearSaveFeedback);
                 updateDirtyState();
             }
             @Override public void afterTextChanged(Editable e) {}
@@ -245,6 +254,9 @@ public final class DynamicLabelsActivity extends Activity {
                 restoringText = false;
                 editor.setSelection(editor.length());
                 updateCount();
+                saveFeedbackUntil = android.os.SystemClock.uptimeMillis() + 1800L;
+                handler.removeCallbacks(clearSaveFeedback);
+                handler.postDelayed(clearSaveFeedback, 1800L);
                 updateDirtyState();
                 Toast.makeText(this, "تم حفظ القائمة وتفعيلها", Toast.LENGTH_SHORT).show();
             } catch (Throwable error) {
@@ -348,6 +360,7 @@ public final class DynamicLabelsActivity extends Activity {
     }
     @Override protected void onPause() {
         handler.removeCallbacks(policyRefresh);
+        handler.removeCallbacks(clearSaveFeedback);
         super.onPause();
     }
     private boolean requireEditable() {
@@ -389,12 +402,18 @@ public final class DynamicLabelsActivity extends Activity {
     private void updateDirtyState() {
         if (editor == null || save == null) return;
         boolean dirty = !editor.getText().toString().equals(savedText);
-        save.setText(dirty ? "✓   حفظ التغييرات الجديدة" : "✓   القائمة محفوظة");
+        boolean showSuccess = !dirty && android.os.SystemClock.uptimeMillis() < saveFeedbackUntil;
+        save.setText(showSuccess ? "✓   تم الحفظ بنجاح!" :
+                (dirty ? "✓   حفظ التغييرات الجديدة" : "✓   القائمة محفوظة"));
+        save.setBackground(showSuccess
+                ? shape(Color.rgb(31, 163, 112), 18, Color.rgb(111, 239, 180))
+                : gradient());
+        save.setTextColor(showSuccess ? Color.WHITE : BG);
         if (editHint != null) {
             editHint.setText(dirty ? "● تغييرات غير محفوظة — اضغط حفظ لتطبيقها" : "✓ جميع التغييرات محفوظة");
             editHint.setTextColor(dirty ? Color.rgb(255, 200, 129) : CYAN);
         }
-        save.setEnabled(!locked && dirty);
+        save.setEnabled(!locked && (dirty || showSuccess));
     }
     private void refreshInterval() {
         if (intervalValue != null) intervalValue.setText(BreakIntervalStore.getHours() + " ساعة");
