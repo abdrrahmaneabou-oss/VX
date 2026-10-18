@@ -34,7 +34,7 @@ public final class DynamicLabelsActivity extends Activity {
     private static final int CYAN = Color.rgb(91, 210, 238);
     private static final int PURPLE = Color.rgb(144, 117, 252);
     private EditText editor;
-    private TextView intervalValue, lockStatus, countLabel, editHint;
+    private TextView intervalValue, lockStatus, countLabel, editHint, randomStatus;
     private Button minus, plus, save, reset;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean locked;
@@ -121,6 +121,20 @@ public final class DynamicLabelsActivity extends Activity {
         intervalHelp.setPadding(0, dp(16), 0, 0);
         intervalCard.addView(intervalHelp);
         content.addView(intervalCard, section());
+
+        LinearLayout randomCard = card();
+        randomCard.addView(label("✦  الحظر الشامل العشوائي", 20, INK, true));
+        TextView randomHelp = label("عند اختيار حظر لمدة 24 ساعة أو أكثر، يحظر النظام التطبيقات التي ثبّتها المستخدم لمدة 15 دقيقة عشوائية في كل ساعة، باستثناء تطبيق الهاتف.", 13, MUTED, false);
+        randomHelp.setPadding(0, dp(10), 0, dp(12));
+        randomCard.addView(randomHelp);
+        randomStatus = label("", 14, CYAN, true);
+        randomStatus.setPadding(dp(12), dp(12), dp(12), dp(12));
+        randomStatus.setBackground(shape(Color.rgb(13, 33, 49), 13, Color.rgb(46, 115, 143)));
+        randomCard.addView(randomStatus);
+        TextView randomBreak = label("✓ دقيقة الاستراحة لها الأولوية دائماً. لا تُعرض المواعيد العشوائية مسبقاً.", 12, MUTED, false);
+        randomBreak.setPadding(0, dp(12), 0, 0);
+        randomCard.addView(randomBreak);
+        content.addView(randomCard, section());
 
         LinearLayout labelsCard = card();
         LinearLayout labelsHeader = row();
@@ -338,6 +352,7 @@ public final class DynamicLabelsActivity extends Activity {
         updateCount();
         updateDirtyState();
         refreshInterval();
+        if (randomStatus != null) randomStatus.setText(RandomFullBlock.status(this));
     }
     private void updateDirtyState() {
         if (editor == null || save == null) return;
