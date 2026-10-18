@@ -1,6 +1,7 @@
 package com.v1f.app.patch;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -9,7 +10,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.text.Editable;
 import android.view.Gravity;
+import android.view.WindowManager;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
@@ -30,10 +34,12 @@ public final class DynamicLabelsActivity extends Activity {
     private static final int CYAN = Color.rgb(91, 210, 238);
     private static final int PURPLE = Color.rgb(144, 117, 252);
     private EditText editor;
-    private TextView intervalValue, lockStatus, countLabel;
+    private TextView intervalValue, lockStatus, countLabel, editHint;
     private Button minus, plus, save, reset;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean locked;
+    private boolean restoringText;
+    private String savedText = "";
     private final Runnable policyRefresh = new Runnable() {
         @Override public void run() {
             refreshPolicy();
@@ -45,6 +51,7 @@ public final class DynamicLabelsActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         getWindow().getDecorView().setSystemUiVisibility(0);
 
         LinearLayout root = column();
@@ -140,13 +147,24 @@ public final class DynamicLabelsActivity extends Activity {
         editor.setPadding(dp(15), dp(16), dp(15), dp(16));
         editor.setBackground(shape(Color.rgb(13, 20, 39), 17, Color.rgb(55, 79, 112)));
         editor.setHint("أضف الجمل التي تريد حظرها...");
-        editor.setText(join(DynamicLabelsStore.load(this)));
+        savedText = join(DynamicLabelsStore.load(this));
+        editor.setText(savedText);
         editor.setHorizontallyScrolling(false);
         labelsCard.addView(editor, new LinearLayout.LayoutParams(-1, dp(285)));
-        TextView editorTip = label("يُحفظ النص عند الضغط على زر الحفظ أدناه", 12, MUTED, false);
+        editHint = label("جميع التغييرات محفوظة", 12, CYAN, false);
+        TextView editorTip = editHint;
         editorTip.setPadding(0, dp(11), 0, 0);
         labelsCard.addView(editorTip);
         content.addView(labelsCard, section());
+        editor.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (restoringText) return;
+                updateCount();
+                updateDirtyState();
+            }
+            @Override public void afterTextChanged(Editable e) {}
+        });
 
         scroll.addView(content);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -178,9 +196,13 @@ public final class DynamicLabelsActivity extends Activity {
             try {
                 LinkedHashSet<String> values = parse(editor.getText().toString());
                 DynamicLabelsStore.save(this, values);
-                editor.setText(join(values));
+                savedText = join(values);
+                restoringText = true;
+                editor.setText(savedText);
+                restoringText = false;
                 editor.setSelection(editor.length());
                 updateCount();
+                updateDirtyState();
                 Toast.makeText(this, "تم حفظ القائمة وتفعيلها", Toast.LENGTH_SHORT).show();
             } catch (Throwable error) {
                 Toast.makeText(this, "تعذر حفظ القائمة: " + safeMessage(error), Toast.LENGTH_LONG).show();
@@ -189,19 +211,33 @@ public final class DynamicLabelsActivity extends Activity {
         });
         reset.setOnClickListener(v -> {
             if (!requireEditable()) return;
-            try {
-                DynamicLabelsStore.reset(this);
-                editor.setText(join(DynamicLabelsStore.load(this)));
-                editor.setSelection(editor.length());
-                updateCount();
-                Toast.makeText(this, "تمت استعادة القائمة الافتراضية", Toast.LENGTH_SHORT).show();
-            } catch (Throwable error) {
-                Toast.makeText(this, "تعذر استعادة القائمة: " + safeMessage(error), Toast.LENGTH_LONG).show();
-            }
-            refreshPolicy();
+            new AlertDialog.Builder(this)
+                    .setTitle("استعادة القائمة الافتراضية؟")
+                    .setMessage("سيتم استبدال الجمل الحالية بالقائمة الافتراضية. لا يمكن التراجع عن هذه العملية.")
+                    .setNegativeButton("إلغاء", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton("استعادة", (dialog, which) -> {
+                        if (!requireEditable()) return;
+                        try {
+                            DynamicLabelsStore.reset(this);
+                            savedText = join(DynamicLabelsStore.load(this));
+                            restoringText = true;
+                            editor.setText(savedText);
+                            restoringText = false;
+                            editor.setSelection(editor.length());
+                            updateCount();
+                            updateDirtyState();
+                            Toast.makeText(this, "تمت استعادة القائمة الافتراضية", Toast.LENGTH_SHORT).show();
+                        } catch (Throwable error) {
+                            restoringText = false;
+                            Toast.makeText(this, "تعذر استعادة القائمة: " + safeMessage(error), Toast.LENGTH_LONG).show();
+                        }
+                        refreshPolicy();
+                    })
+                    .show();
         });
         setContentView(root);
         updateCount();
+        updateDirtyState();
         refreshInterval();
         refreshPolicy();
     }
@@ -290,11 +326,28 @@ public final class DynamicLabelsActivity extends Activity {
         if (save != null) save.setEnabled(canEdit);
         if (reset != null) reset.setEnabled(canEdit);
         if (editor != null && locked) {
-            editor.setText(join(DynamicLabelsStore.load(this)));
-            editor.setSelection(0);
+            String authoritative = join(DynamicLabelsStore.load(this));
+            if (!authoritative.contentEquals(editor.getText())) {
+                restoringText = true;
+                editor.setText(authoritative);
+                editor.setSelection(0);
+                restoringText = false;
+            }
+            savedText = authoritative;
         }
         updateCount();
+        updateDirtyState();
         refreshInterval();
+    }
+    private void updateDirtyState() {
+        if (editor == null || save == null) return;
+        boolean dirty = !editor.getText().toString().equals(savedText);
+        save.setText(dirty ? "✓   حفظ التغييرات الجديدة" : "✓   القائمة محفوظة");
+        if (editHint != null) {
+            editHint.setText(dirty ? "● تغييرات غير محفوظة — اضغط حفظ لتطبيقها" : "✓ جميع التغييرات محفوظة");
+            editHint.setTextColor(dirty ? Color.rgb(255, 200, 129) : CYAN);
+        }
+        save.setEnabled(!locked && dirty);
     }
     private void refreshInterval() {
         if (intervalValue != null) intervalValue.setText(BreakIntervalStore.getHours() + " ساعة");
