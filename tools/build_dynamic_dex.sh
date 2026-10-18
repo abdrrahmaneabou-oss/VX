@@ -23,6 +23,7 @@ javac -source 8 -target 8 \
   tools/dynamic/GuardBridgeGrace.java \
   tools/dynamic/DynamicLabelsActivity.java \
   tools/dynamic/DynamicLabelsEntry.java \
+  tools/dynamic/HomeCardState.java \
   tools/dynamic/RobustSettingsGuard.java
 
 # The stub only exists to satisfy javac. The real class is already in classes4.dex.
