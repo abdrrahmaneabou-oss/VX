@@ -20,6 +20,7 @@ javac -source 8 -target 8 \
   tools/dynamic/StrictBlockPolicy.java \
   tools/dynamic/RandomFullBlock.java \
   tools/dynamic/DefaultSelections.java \
+  tools/dynamic/GuardBridgeGrace.java \
   tools/dynamic/DynamicLabelsActivity.java \
   tools/dynamic/DynamicLabelsEntry.java \
   tools/dynamic/RobustSettingsGuard.java
