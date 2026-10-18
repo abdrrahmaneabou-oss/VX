@@ -21,6 +21,9 @@ public final class HomeCardState {
     } catch (Exception ignored) {}
     return false;
   }
+  public static String permissionLabel() {
+    return accessibilityReady() ? "الصلاحيات" : "🔴 الصلاحيات";
+  }
   public static String durationLabel() {
     Activity activity = DynamicLabelsEntry.getHost();
     if (activity == null) return "◷ مدة الحظر";
