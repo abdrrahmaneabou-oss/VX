@@ -35,7 +35,10 @@ jobs:
           HOME="$(find build/decompiled -name HomeScreenKt.smali | head -n1)"
           grep -nE '^\\.method|CelestialButton|Scaffold|Column|Button|Text' "$HOME" | head -n 160
           echo '==== HomeScreen composable method beginning ===='
-          sed -n '1,360p' "$HOME"
+          sed -n '/^.method public static final HomeScreen(/,/^.end method/p' "$HOME" | head -n 340
+          echo '==== V1FApp layout ===='
+          APP="$(find build/decompiled -name 'V1FAppKt.smali' | head -n1)"
+          grep -nE '^.method|HomeScreen|Scaffold|NavHost' "$APP" | head -n 110
           echo '==== Compose singleton root ===='
           SING="$(find build/decompiled -name 'ComposableSingletons\\$MainActivityKt.smali' | head -n1)"
           test -z "$SING" || grep -nE 'HomeScreen|V1FApp|\\.method' "$SING" | head -n 90
