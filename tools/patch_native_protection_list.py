@@ -11,11 +11,12 @@ def main(root):
     s = p.read_text()
     if 'V2F_PROTECTION_LIST_COMPOSE' in s:
         return
-    anchor = '''    :cond_6
-    invoke-interface {v0}, Landroidx/compose/runtime/Composer;->endReplaceGroup()V'''
+    anchor = '''    const v7, 0x67fe897f
+
+    invoke-interface {v0, v7}, Landroidx/compose/runtime/Composer;->startReplaceGroup(I)V'''
     if s.count(anchor) != 1:
         raise RuntimeError('Original home actions boundary not found uniquely')
-    insert = '''    # V2F_PROTECTION_LIST_COMPOSE: native child of the original HomeScreen Column
+    insert = '''    # V2F_PROTECTION_LIST_COMPOSE: directly after the main setup button, before conditional actions
     const-string v7, "🛡 قائمة الحماية"
 
     sget-object v8, Lcom/v1f/app/patch/ProtectionListAction;->INSTANCE:Lcom/v1f/app/patch/ProtectionListAction;
@@ -33,7 +34,7 @@ def main(root):
     invoke-static/range {v7 .. v15}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton(Ljava/lang/String;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;ZZZLandroidx/compose/runtime/Composer;II)V
 
 '''
-    s = s.replace(anchor, anchor + '\n\n' + insert, 1)
+    s = s.replace(anchor, insert + anchor, 1)
     p.write_text(s)
     callback = p.parent / 'ProtectionListAction.smali'
     callback.write_text('''.class public final Lcom/v1f/app/patch/ProtectionListAction;
