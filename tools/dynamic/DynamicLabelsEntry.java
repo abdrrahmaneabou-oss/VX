@@ -14,6 +14,8 @@ public final class DynamicLabelsEntry {
         host = new WeakReference<>(activity);
     }
 
+    public static Activity getHost() { return host.get(); }
+
     public static void openFromCompose() {
         Activity activity = host.get();
         if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
