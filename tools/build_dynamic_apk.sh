@@ -16,7 +16,7 @@ fi
 java -jar "$APKTOOL" d -f "$BASE_APK" -o "$ROOT"
 python3 tools/inspect_block_state.py "$ROOT"
 # Diagnostic only; this script does not alter strict-block state.
-# Updated hourly scheduler integration.
+# Updated hourly scheduler integration with configurable 1-45 minute window.
 # The native protection action is inserted before the optional actions in HomeScreen.
 # The protection-list Activity uses the redesigned celestial dark settings interface.
 # Enhanced editor includes live unsaved-state feedback and reset confirmation.
