@@ -34,20 +34,33 @@ def main(root):
     # This removes the old Permissions -> Applications forced progression.
     host = unique(root, 'V1FAppKt$V1FApp$2$1$2.smali')
     hs = host.read_text()
-    # The primary Home action is permission-dependent in the original APK:
-    # ready -> Applications, not-ready -> Permissions. Since the first card
-    # is now explicitly Permissions, both paths must target Permissions.
-    # Apps has its own direct callback in patch_native_protection_list.py.
+    # The first home card and Apps card share the original Compose callback.
+    # AppsCardAction marks the source before invoking that proven callback.
+    # Consume the marker here: only an explicit Apps-card click opens Apps;
+    # every ordinary first-card click opens Permissions, regardless of status.
     primary_start = hs.find('.method private static final invoke$lambda$3$lambda$2(')
     primary_end = hs.find('.end method', primary_start)
     if primary_start < 0 or primary_end < 0:
         raise RuntimeError("Original primary home callback missing")
     primary = hs[primary_start:primary_end]
-    old_destination = 'Lcom/v1f/app/ui/V1FScreen;->Applications:Lcom/v1f/app/ui/V1FScreen;'
-    new_destination = 'Lcom/v1f/app/ui/V1FScreen;->Permissions:Lcom/v1f/app/ui/V1FScreen;'
-    if primary.count(old_destination) != 1 or primary.count(new_destination) != 1:
-        raise RuntimeError("Unexpected permission-dependent primary callback")
-    hs = hs[:primary_start] + primary.replace(old_destination, new_destination, 1) + hs[primary_end:]
+    call_start = primary.find('    invoke-static {p0}, Lcom/v1f/app/ui/V1FAppKt;->access$V1FApp$lambda$1(')
+    call_end = primary.find('    invoke-static {p1, v0}, Lcom/v1f/app/ui/V1FAppKt;->access$V1FApp$lambda$4(', call_start)
+    if call_start < 0 or call_end < 0:
+        raise RuntimeError("Original primary callback body changed")
+    original_branch = primary[call_start:call_end]
+    if (original_branch.count('V1FScreen;->Applications:') != 1 or
+            original_branch.count('V1FScreen;->Permissions:') != 1):
+        raise RuntimeError("Unexpected original primary destinations")
+    primary = primary[:call_start] + '''    invoke-static {}, Lcom/v1f/app/patch/HomeQuickNav;->consumeAppsCard()Z
+    move-result v0
+    if-eqz v0, :permissions_card
+    sget-object v0, Lcom/v1f/app/ui/V1FScreen;->Applications:Lcom/v1f/app/ui/V1FScreen;
+    goto :card_destination
+    :permissions_card
+    sget-object v0, Lcom/v1f/app/ui/V1FScreen;->Permissions:Lcom/v1f/app/ui/V1FScreen;
+    :card_destination
+''' + primary[call_end:]
+    hs = hs[:primary_start] + primary + hs[primary_end:]
     invocation = '    invoke-static/range {v1 .. v8}, Lcom/v1f/app/ui/screens/PermissionsScreenKt;->PermissionsScreen('
     if hs.count(invocation) != 1:
         raise RuntimeError("Permissions screen callsite changed")
