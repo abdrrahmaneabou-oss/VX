@@ -22,6 +22,16 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
+          echo '==== SessionRepository selection methods ===='
+          f=$(find build/decompiled -name 'SessionRepository.smali' | head -n1); grep -n -E '^.method|\.field' "$f" | head -n 140
+          echo '==== SessionRepository constructor and selected getters ===='
+          sed -n '/^.method public constructor <init>/,/^.end method/p' "$f" | head -n 110
+          echo '==== InstalledApp model ===='
+          f=$(find build/decompiled -name 'InstalledApp.smali' | head -n1); grep -n -E '^.method|\.field' "$f" | head -n 90
+          echo '==== App selection references ===='
+          grep -n -E 'SessionRepository;->|InstalledAppsRepository;->' build/decompiled/smali_classes11/com/v1f/app/ui/screens/AppSelectionScreenKt.smali | head -n 80 || true
+          echo '==== Website repository constructor ===='
+          f=$(find build/decompiled -name 'BlockedSitesRepository.smali' | head -n1); sed -n '/^.method public constructor <init>/,/^.end method/p' "$f" | head -n 80
           echo '==== Exact repository methods ===='
           for n in BlockedAppsRepository BlockedSitesRepository InstalledAppsRepository AppGraph; do f=$(find build/decompiled -name "$n.smali" | head -n1); echo "$f"; test -z "$f" || grep -n -E '^.method|\.field' "$f" | head -n 125; done
           echo '==== App selection toggles ===='
