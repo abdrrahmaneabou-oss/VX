@@ -57,17 +57,35 @@ def main(root):
     invoke-static/range {{v7 .. v15}}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton(Ljava/lang/String;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;ZZZLandroidx/compose/runtime/Composer;II)V
 
 '''
-    insert += """    const-string v7, "✦ بدء الحماية"
+    insert += """    # Separate activation from configuration cards.
+    sget-object v7, Landroidx/compose/ui/Modifier;->Companion:Landroidx/compose/ui/Modifier$Companion;
+    check-cast v7, Landroidx/compose/ui/Modifier;
+    const/16 v8, 0x18
+    int-to-float v8, v8
+    invoke-static {v8}, Landroidx/compose/ui/unit/Dp;->constructor-impl(F)F
+    move-result v8
+    invoke-static {v7, v8}, Landroidx/compose/foundation/layout/SizeKt;->height-3ABfNKs(Landroidx/compose/ui/Modifier;F)Landroidx/compose/ui/Modifier;
+    move-result-object v7
+    const/4 v9, 0x6
+    invoke-static {v7, v0, v9}, Landroidx/compose/foundation/layout/SpacerKt;->Spacer(Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;I)V
+
+    const-string v7, "بدء الحماية"
 
     sget-object v8, Lcom/v1f/app/patch/QuickStartAction;->INSTANCE:Lcom/v1f/app/patch/QuickStartAction;
     sget-object v9, Landroidx/compose/ui/Modifier;->Companion:Landroidx/compose/ui/Modifier$Companion;
     check-cast v9, Landroidx/compose/ui/Modifier;
+    const/16 v10, 0xdc
+    int-to-float v10, v10
+    invoke-static {v10}, Landroidx/compose/ui/unit/Dp;->constructor-impl(F)F
+    move-result v10
+    invoke-static {v9, v10}, Landroidx/compose/foundation/layout/SizeKt;->width-3ABfNKs(Landroidx/compose/ui/Modifier;F)Landroidx/compose/ui/Modifier;
+    move-result-object v9
     const/4 v10, 0x0
     const/4 v11, 0x0
     const/4 v12, 0x0
     move-object v13, v0
     const/4 v14, 0x0
-    const/16 v15, 0x3c
+    const/16 v15, 0x38
     invoke-static/range {v7 .. v15}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton(Ljava/lang/String;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;ZZZLandroidx/compose/runtime/Composer;II)V
 
 """
