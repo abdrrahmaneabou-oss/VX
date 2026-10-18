@@ -17,7 +17,7 @@ def main(root):
     s = s.replace('const-string v0, "\\u0627\\u0628\\u062f\\u0623 \\u0625\\u0639\\u062f\\u0627\\u062f \\u0627\\u0644\\u062d\\u0645\\u0627\\u064a\\u0629"', 'invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->permissionLabel()Ljava/lang/String;\n\n    move-result-object v0')
     first = '    invoke-static/range {v7 .. v15}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton('
     if first not in s: raise RuntimeError("Primary button anchor missing")
-    s = s.replace(first, '    sget-object v8, Lcom/v1f/app/patch/QuickPermissionsAction;->INSTANCE:Lcom/v1f/app/patch/QuickPermissionsAction;\n\n' + first, 1)
+    # Keep the original primary action callback: replacing v8 broke the existing permissions navigation.
     home.write_text(s)
 
     duration = unique(root, 'DurationActivity.smali')
