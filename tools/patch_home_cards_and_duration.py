@@ -17,16 +17,12 @@ def main(root):
     s = s.replace('const-string v0, "\\u0627\\u0628\\u062f\\u0623 \\u0625\\u0639\\u062f\\u0627\\u062f \\u0627\\u0644\\u062d\\u0645\\u0627\\u064a\\u0629"', 'invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->permissionLabel()Ljava/lang/String;\n\n    move-result-object v0')
     first = '    invoke-static/range {v7 .. v15}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton('
     if first not in s: raise RuntimeError("Primary button anchor missing")
-    # The original first home card is the permissions card, but its original
-    # onPrimaryAction callback opens Applications. Override ONLY its onClick
-    # argument (v8) immediately before this original button call. The separate
-    # Applications card inserted by patch_native_protection_list keeps the
-    # original onPrimaryAction callback, which works on the device.
-    # This change does not alter any of the other five home cards.
-    if s.index(first) > s.index('V2F_PROTECTION_LIST_COMPOSE'):
-        raise RuntimeError("Original permissions button must precede inserted cards")
-    s = s.replace(first, '''    sget-object v8, Lcom/v1f/app/patch/QuickPermissionsAction;->INSTANCE:Lcom/v1f/app/patch/QuickPermissionsAction;
-    invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->accessibilityReady()Z
+    # The original primary callback is state-dependent: it opens Permissions
+    # before Accessibility is enabled, then Applications afterwards. The
+    # attempted forced callback replacement caused a device crash; restore
+    # the proven original callback until the actual crash trace is available.
+    # Keep the existing accessibility-dependent button styling intact.
+    s = s.replace(first, '''    invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->accessibilityReady()Z
     move-result v11
     xor-int/lit8 v11, v11, 0x1
     const/16 v15, 0x2c
