@@ -22,20 +22,12 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
-          echo '==== HOME BUTTON LINES ===='
-          f=$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)
-          grep -n -B 30 -A 42 -E 'CelestialButtonKt;->CelestialButton|ابدأ إعداد الحماية|إعداد الحماية|PermissionSnapshot;->' "$f" | tail -n 190
-          echo '==== DURATION BUTTON ===='
+          echo '==== DURATION ALL BUTTON LABELS ===='
           f=$(find build/decompiled -name 'DurationActivity.smali' | head -n1)
-          grep -n -B 20 -A 23 -E 'بدء الحماية|ابدأ الحماية|startSession|lambda\\$5|savePreferences|v2f_duration' "$f" | tail -n 210
-          echo '==== DURATION START METHOD ===='
-          sed -n '/^.method private startSession()/,/^.end method/p' "$f" | head -n 190
-          echo '==== APP PRIMARY ACTION ===='
-          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1.smali' | head -n1)
-          grep -n -B 12 -A 20 -E 'V1FScreen;->Permissions|V1FScreen;->Duration' "$f" | head -n 130 || true
-          echo '==== PERMISSION SNAPSHOT ===='
-          f=$(find build/decompiled -name 'PermissionSnapshot.smali' | head -n1)
-          grep -n -E '^.method' "$f"
+          grep -n -B 12 -A 18 -E 'iput-object.*->start:|setText\\(Ljava/lang/CharSequence;\\)|const-string.*\\\\u0628\\\\u062f\\\\u0621' "$f" | tail -n 240
+          echo '==== CELESTIAL BUTTON FLAGS ===='
+          f=$(find build/decompiled -name 'CelestialButtonKt.smali' | head -n1)
+          grep -n -E '^.method|0xff|0x' "$f" | head -n 25
           exit 0
           echo '==== Accessibility service complete event method ===='
           f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
