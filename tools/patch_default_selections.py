@@ -16,7 +16,7 @@ if start < 0 or end < 0:
     raise RuntimeError("Cannot find AppGraph.initialize")
 section = data[start:end]
 needle = "    return-void"
-if section.count(needle) != 1:
+if section.count(needle) < 1:
     raise RuntimeError("Unexpected AppGraph.initialize return paths: " + str(section.count(needle)))
 section = section[:section.rfind(needle)] + (
     "    invoke-static {}, Lcom/v1f/app/patch/DefaultSelections;->apply()V\n\n" + needle)
