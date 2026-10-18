@@ -32,6 +32,8 @@ python3 tools/patch_random_full_block.py "$ROOT"
 python3 tools/patch_default_selections.py "$ROOT"
 python3 tools/patch_guardbridge_grace.py "$ROOT"
 bash tools/build_dynamic_dex.sh
+echo "=== HOME PATCH DIAGNOSTIC 640-690 ==="
+nl -ba "$ROOT/smali_classes11/com/v1f/app/ui/screens/HomeScreenKt\$HomeScreen\$3\$1\$8.smali" | sed -n "640,690p"
 java -jar "$APKTOOL" b "$ROOT" -o build/V2F-unsigned.apk
 python3 tools/package_dynamic.py build/V2F-unsigned.apk build/classes15.dex
 
