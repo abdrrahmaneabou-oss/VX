@@ -45,7 +45,7 @@ attach = "    invoke-static {p0}, Lcom/v1f/app/patch/BreakRuntime;->attach(Lcom/
 detach = "    invoke-static {p0}, Lcom/v1f/app/patch/BreakRuntime;->detach(Lcom/v1f/app/service/AppBlockAccessibilityService;)V"
 if text.count(attach) != 1 or text.count(detach) != 1:
     raise RuntimeError("Could not identify existing accessibility service lifecycle hooks")
-text = text.replace(attach, attach + "\\n\\n    invoke-static {p0}, Lcom/v1f/app/patch/RandomFullBlock;->attach(Landroid/accessibilityservice/AccessibilityService;)V")
-text = text.replace(detach, detach + "\\n\\n    invoke-static {p0}, Lcom/v1f/app/patch/RandomFullBlock;->detach(Landroid/accessibilityservice/AccessibilityService;)V")
+text = text.replace(attach, attach + "\n\n    invoke-static {p0}, Lcom/v1f/app/patch/RandomFullBlock;->attach(Landroid/accessibilityservice/AccessibilityService;)V")
+text = text.replace(detach, detach + "\n\n    invoke-static {p0}, Lcom/v1f/app/patch/RandomFullBlock;->detach(Landroid/accessibilityservice/AccessibilityService;)V")
 path.write_text(text)
 print("Added hourly random full-app protection hook to accessibility service")
