@@ -22,13 +22,14 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
-          echo '==== MainActivity ===='
-          f=$(find build/decompiled -path '*/com/v1f/app/MainActivity.smali' | head -n1)
-          grep -nE '^.method|navigate|setContent|onCreate|HomeScreen|Duration|Selection' "$f" | head -n 120
-          echo '==== Navigation-related files ===='
-          find build/decompiled -path '*/com/v1f/app/*' -name '*.smali' | grep -E 'V1FApp|Navigation|NavGraph|MainActivity' | head -n 90
-          echo '==== Main UI callbacks ===='
-          for f in $(find build/decompiled -path '*/com/v1f/app/*' -name '*smali' | grep -E 'MainActivity|V1FApp' | head -n 16); do echo "$f"; grep -nE 'duration|Duration|app_selection|apps|websites|Websites|navigate|HomeScreen|AppSelection' "$f" | head -n 45; done
+          echo '==== V1FScreen ===='
+          cat "$(find build/decompiled -name V1FScreen.smali | head -n1)" | head -n 240
+          echo '==== App UI state navigation ===='
+          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1$2.smali' | head -n1)
+          grep -n -E 'V1FScreen|HomeScreen|Duration|AppSelection|WebsiteSelection|invoke\(' "$f" | head -n 130 || true
+          echo '==== App UI lambda field state ===='
+          f=$(find build/decompiled -name 'V1FAppKt$V1FApp$2$1.smali' | head -n1)
+          grep -n -E 'V1FScreen|MutableState|setValue|HomeScreen|Duration|Selection' "$f" | head -n 110 || true
           exit 0
           echo '==== Accessibility service complete event method ===='
           f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
