@@ -138,7 +138,7 @@ def main(root):
     return-object v0
 .end method
 ''')
-    for name, method in [("QuickDurationAction", "openDuration")]:
+    for name, method in [("QuickDurationAction", "openDuration"), ("QuickPermissionsAction", "openPermissions")]:
         (p.parent / (name + ".smali")).write_text(f'''.class public final Lcom/v1f/app/patch/{name};
 .super Lkotlin/jvm/internal/Lambda;
 .implements Lkotlin/jvm/functions/Function0;
