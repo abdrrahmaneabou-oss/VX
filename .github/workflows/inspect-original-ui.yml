@@ -22,6 +22,10 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
+          echo '==== Selection screen method identifiers ===='
+          for n in AppSelectionScreenKt WebsiteSelectionScreenKt; do f=$(find build/decompiled -name "$n.smali" | head -n1); echo "$n"; grep -n -E '^.method|SharedPreferences|selected|Selected|startSession|toggle|Set;' "$f" | head -n 130; done
+          echo '==== app selection prefs references ===='
+          grep -R -n -E 'v1f_selected|selected_packages|selected_apps|blocked_packages|app_selection' build/decompiled/smali_classes*/com/v1f/app | head -n 90 || true
           echo '==== SessionRepository selection methods ===='
           f=$(find build/decompiled -name 'SessionRepository.smali' | head -n1); grep -n -E '^.method|\.field' "$f" | head -n 140
           echo '==== SessionRepository constructor and selected getters ===='
