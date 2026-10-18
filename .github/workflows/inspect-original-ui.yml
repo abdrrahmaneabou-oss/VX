@@ -26,7 +26,7 @@ jobs:
           grep -R -n -B 35 -A 20 'CompactGlassButtonKt;->CompactGlassButton\|CelestialButtonKt;->CelestialButton' build/decompiled/smali_classes11/com/v1f/app/ui/screens/HomeScreen* | head -n 330 || true
           echo '==== Native insertion context ===='
           TARGET="$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)"
-          sed -n '630,820p' "$TARGET"
+          sed -n '360,630p' "$TARGET"
           echo '==== MainActivity methods ===='
           MAIN="$(find build/decompiled -name MainActivity.smali | head -n1)"
           grep -nE '^\.method|setContent|Composable|attachStatus|DynamicLabelsEntry' "$MAIN" | head -n 120
