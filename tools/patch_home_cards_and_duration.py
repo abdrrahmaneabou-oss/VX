@@ -8,7 +8,42 @@ def unique(root, name):
     if len(files) != 1: raise RuntimeError(f"Expected one {name}, got {len(files)}")
     return files[0]
 
+def permissions_only(root):
+    """Remove the old wizard CTA without disturbing its Compose group pair."""
+    p = unique(root, 'PermissionsScreenKt.smali')
+    s = p.read_text()
+    def literal(text):
+        return text.encode('unicode_escape').decode('ascii')
+    title = '"' + literal('اختيار التطبيقات') + '"'
+    if s.count(title) != 1:
+        raise RuntimeError('Expected one legacy apps CTA in Permissions')
+    label = s.index(title)
+    start = s.rfind('    invoke-virtual/range {p0 .. p0}, Lcom/v1f/app/model/PermissionSnapshot;->getAllReady()Z', 0, label)
+    button = '    invoke-static/range {v9 .. v17}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton('
+    end = s.find('\n', s.index(button, label))
+    if start < 0 or end < 0:
+        raise RuntimeError('Permissions CTA boundaries changed')
+    removed = s[start:end]
+    if '->startReplaceGroup(' in removed or '->endReplaceGroup(' in removed:
+        raise RuntimeError('Refusing to unbalance Permissions composition')
+    outside = s[:start] + s[end:]
+    for target in re.findall(r'^\s*(:\w+)\s*$', removed, re.M):
+        if re.search(re.escape(target) + r'\b', outside):
+            raise RuntimeError('Permissions CTA has an external branch target')
+    s = s[:start] + '    # V2F_PERMISSIONS_ONLY: no application-selection CTA' + s[end:]
+    for before, after in [
+        ('فعّل الطبقات الثلاث لتشغيل اختيار التطبيقات والحظر الصارم.', 'اضبط الصلاحيات الثلاث من البطاقات أدناه.'),
+        ('مراقبة التطبيقات وتنفيذ شاشة الحظر جاهزة.', 'إمكانية الوصول وتنفيذ شاشة الحظر جاهزان.'),
+    ]:
+        if s.count(literal(before)) != 1:
+            raise RuntimeError('Permissions explanation changed')
+        s = s.replace(literal(before), literal(after), 1)
+    if literal('التطبيقات') in s or 'التطبيقات' in s:
+        raise RuntimeError('Applications text remains in Permissions')
+    p.write_text(s)
+
 def main(root):
+    permissions_only(root)
     home = unique(root, 'HomeScreenKt$HomeScreen$3$1$8.smali')
     s = home.read_text()
     if s.count('Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton(') < 2:
@@ -17,10 +52,8 @@ def main(root):
     s = s.replace('const-string v0, "\\u0627\\u0628\\u062f\\u0623 \\u0625\\u0639\\u062f\\u0627\\u062f \\u0627\\u0644\\u062d\\u0645\\u0627\\u064a\\u0629"', 'invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->permissionLabel()Ljava/lang/String;\n\n    move-result-object v0')
     first = '    invoke-static/range {v7 .. v15}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton('
     if first not in s: raise RuntimeError("Primary button anchor missing")
-    # The original primary callback is state-dependent: it opens Permissions
-    # before Accessibility is enabled, then Applications afterwards. The
-    # attempted forced callback replacement caused a device crash; restore
-    # the proven original callback until the actual crash trace is available.
+    # Preserve the original callback and its Compose capture. Route it below
+    # within the ui package, where the package-private V1FScreen is accessible.
     # Keep the existing accessibility-dependent button styling intact.
     s = s.replace(first, '''    invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->accessibilityReady()Z
     move-result v11

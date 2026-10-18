@@ -138,7 +138,7 @@ def main(root):
     return-object v0
 .end method
 ''')
-    for name, method in [("QuickDurationAction", "openDuration"), ("QuickPermissionsAction", "openPermissions"), ("QuickAppsAction", "openApplications")]:
+    for name, method in [("QuickDurationAction", "openDuration")]:
         (p.parent / (name + ".smali")).write_text(f'''.class public final Lcom/v1f/app/patch/{name};
 .super Lkotlin/jvm/internal/Lambda;
 .implements Lkotlin/jvm/functions/Function0;
@@ -208,10 +208,18 @@ def main(root):
 .method public invoke()Ljava/lang/Object;
     .locals 1
     invoke-static {}, Lcom/v1f/app/patch/HomeQuickNav;->markAppsCard()V
+    :try_start_delegate
     iget-object v0, p0, Lcom/v1f/app/patch/AppsCardAction;->delegate:Lkotlin/jvm/functions/Function0;
     invoke-interface {v0}, Lkotlin/jvm/functions/Function0;->invoke()Ljava/lang/Object;
     move-result-object v0
+    :try_end_delegate
+    .catchall {:try_start_delegate .. :try_end_delegate} :clear_and_rethrow
+    invoke-static {}, Lcom/v1f/app/patch/HomeQuickNav;->clearAppsCard()V
     return-object v0
+    :clear_and_rethrow
+    move-exception v0
+    invoke-static {}, Lcom/v1f/app/patch/HomeQuickNav;->clearAppsCard()V
+    throw v0
 .end method
 ''')
     nav = p.parent / 'HomeQuickNav.smali'
@@ -236,32 +244,19 @@ def main(root):
     return-void
 .end method
 
+.method public static clearAppsCard()V
+    .locals 1
+    const/4 v0, 0x0
+    sput-boolean v0, Lcom/v1f/app/patch/HomeQuickNav;->appsCardPending:Z
+    return-void
+.end method
+
 .method public static consumeAppsCard()Z
     .locals 2
     sget-boolean v0, Lcom/v1f/app/patch/HomeQuickNav;->appsCardPending:Z
     const/4 v1, 0x0
     sput-boolean v1, Lcom/v1f/app/patch/HomeQuickNav;->appsCardPending:Z
     return v0
-.end method
-
-.method public static openPermissions()V
-    .locals 2
-    sget-object v0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
-    if-eqz v0, :done
-    sget-object v1, Lcom/v1f/app/ui/V1FScreen;->Permissions:Lcom/v1f/app/ui/V1FScreen;
-    invoke-interface {v0, v1}, Landroidx/compose/runtime/MutableState;->setValue(Ljava/lang/Object;)V
-    :done
-    return-void
-.end method
-
-.method public static openApplications()V
-    .locals 2
-    sget-object v0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
-    if-eqz v0, :done
-    sget-object v1, Lcom/v1f/app/ui/V1FScreen;->Applications:Lcom/v1f/app/ui/V1FScreen;
-    invoke-interface {v0, v1}, Landroidx/compose/runtime/MutableState;->setValue(Ljava/lang/Object;)V
-    :done
-    return-void
 .end method
 
 .method public static startProtection()V
