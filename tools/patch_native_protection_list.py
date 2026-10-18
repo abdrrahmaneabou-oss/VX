@@ -39,7 +39,7 @@ def main(root):
         ("▣ اختيار التطبيقات", "QuickAppsAction"),
         ("◎ اختيار المواقع", "QuickSitesAction"),
     ]:
-        label = ('invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->durationLabel()Ljava/lang/String;\\n\\n    move-result-object v7' if callback == "QuickDurationAction" else f'const-string v7, "{title}"')
+        label = ('invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->durationLabel()Ljava/lang/String;\n\n    move-result-object v7' if callback == "QuickDurationAction" else f'const-string v7, "{title}"')
         insert += f'''    {label}
 
     sget-object v8, Lcom/v1f/app/patch/{callback};->INSTANCE:Lcom/v1f/app/patch/{callback};
