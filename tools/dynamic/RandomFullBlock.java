@@ -66,12 +66,31 @@ public final class RandomFullBlock {
             long[] expanded = new long[required];
             System.arraycopy(starts, 0, expanded, 0, starts.length);
             for (int i = starts.length; i < required; i++) {
-                // Minute 1..(60-duration) inclusive: the entire window fits within the hour.
+                // Every window fits inside its hour. The minimum free gap equals
+                // the user-selected blocking duration; impossible hours are skipped.
                 android.content.SharedPreferences prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-                String key = id + ":minutes:" + minutes + ":hour:" + i;
+                String key = id + ":gap-v2:minutes:" + minutes + ":hour:" + i;
+                long hourStart = i * HOUR;
+                long durationMs = minutes * 60000L;
+                long earliest = hourStart;
+                // Find the most recent actual block, skipping empty hours.
+                for (int previous = i - 1; previous >= 0; previous--) {
+                    if (expanded[previous] >= 0) {
+                        earliest = Math.max(earliest,
+                                previous * HOUR + expanded[previous] + 2L * durationMs);
+                        break;
+                    }
+                }
+                long latest = hourStart + HOUR - durationMs;
+                if (earliest > latest) {
+                    expanded[i] = -1L; // Cannot fit a complete block plus full rest.
+                    continue;
+                }
+                int firstMinute = (int)((earliest - hourStart + 59999L) / 60000L);
+                int lastMinute = 60 - minutes;
                 int minute = prefs.getInt(key, -1);
-                if (minute < 1 || minute > 60 - minutes) {
-                    minute = 1 + RNG.nextInt(60 - minutes);
+                if (minute < firstMinute || minute > lastMinute) {
+                    minute = firstMinute + RNG.nextInt(lastMinute - firstMinute + 1);
                     prefs.edit().putInt(key, minute).apply();
                 }
                 expanded[i] = minute * 60000L;
@@ -79,7 +98,7 @@ public final class RandomFullBlock {
             starts = expanded;
         }
         long minuteInHour = elapsed % HOUR;
-        return minuteInHour >= starts[(int)index] && minuteInHour < starts[(int)index] + minutes * 60000L;
+        return starts[(int)index] >= 0 && minuteInHour >= starts[(int)index] &&\n                minuteInHour < starts[(int)index] + minutes * 60000L;
     }
 
     public static boolean shouldBlock(AccessibilityService service, AccessibilityEvent event) {
