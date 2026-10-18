@@ -25,6 +25,7 @@ python3 tools/patch_break_interval_dynamic.py "$ROOT"
 python3 tools/patch_three_second_lock.py "$ROOT"
 python3 tools/patch_native_protection_list.py "$ROOT"
 python3 tools/patch_accessibility_only.py "$ROOT"
+python3 tools/patch_random_full_block.py "$ROOT"
 bash tools/build_dynamic_dex.sh
 java -jar "$APKTOOL" b "$ROOT" -o build/V2F-unsigned.apk
 python3 tools/package_dynamic.py build/V2F-unsigned.apk build/classes15.dex
