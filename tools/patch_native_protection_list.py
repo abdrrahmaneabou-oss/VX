@@ -57,6 +57,20 @@ def main(root):
     invoke-static/range {{v7 .. v15}}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton(Ljava/lang/String;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;ZZZLandroidx/compose/runtime/Composer;II)V
 
 '''
+    insert += """    const-string v7, "✦ بدء الحماية"
+
+    sget-object v8, Lcom/v1f/app/patch/QuickStartAction;->INSTANCE:Lcom/v1f/app/patch/QuickStartAction;
+    sget-object v9, Landroidx/compose/ui/Modifier;->Companion:Landroidx/compose/ui/Modifier$Companion;
+    check-cast v9, Landroidx/compose/ui/Modifier;
+    const/4 v10, 0x0
+    const/4 v11, 0x0
+    const/4 v12, 0x0
+    move-object v13, v0
+    const/4 v14, 0x0
+    const/16 v15, 0x3c
+    invoke-static/range {v7 .. v15}, Lcom/v1f/app/ui/components/CelestialButtonKt;->CelestialButton(Ljava/lang/String;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;ZZZLandroidx/compose/runtime/Composer;II)V
+
+"""
     s = s.replace(anchor, insert + anchor, 1)
     p.write_text(s)
     callback = p.parent / 'ProtectionListAction.smali'
@@ -117,6 +131,31 @@ def main(root):
     return-object v0
 .end method
 ''')
+    for name, method in [("QuickStartAction", "startProtection"), ("QuickPermissionsAction", "openPermissions")]:
+        (p.parent / (name + ".smali")).write_text(f""".class public final Lcom/v1f/app/patch/{name};
+.super Lkotlin/jvm/internal/Lambda;
+.implements Lkotlin/jvm/functions/Function0;
+.field public static final INSTANCE:Lcom/v1f/app/patch/{name};
+.method static constructor <clinit>()V
+    .locals 1
+    new-instance v0, Lcom/v1f/app/patch/{name};
+    invoke-direct {{v0}}, Lcom/v1f/app/patch/{name};-><init>()V
+    sput-object v0, Lcom/v1f/app/patch/{name};->INSTANCE:Lcom/v1f/app/patch/{name};
+    return-void
+.end method
+.method public constructor <init>()V
+    .locals 1
+    const/4 v0, 0x0
+    invoke-direct {{p0, v0}}, Lkotlin/jvm/internal/Lambda;-><init>(I)V
+    return-void
+.end method
+.method public invoke()Ljava/lang/Object;
+    .locals 1
+    invoke-static {{}}, Lcom/v1f/app/patch/HomeQuickNav;->{method}()V
+    sget-object v0, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;
+    return-object v0
+.end method
+""")
     nav = p.parent / 'HomeQuickNav.smali'
     nav.write_text('''.class public final Lcom/v1f/app/patch/HomeQuickNav;
 .super Ljava/lang/Object;
