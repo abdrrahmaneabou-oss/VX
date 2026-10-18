@@ -217,10 +217,22 @@ def main(root):
 .end method
 
 .method public static startProtection()V
-    .locals 1
-    const/4 v0, 0x1
-    sput-boolean v0, Lcom/v1f/app/patch/HomeQuickNav;->pendingStart:Z
-    invoke-static {}, Lcom/v1f/app/patch/HomeQuickNav;->openDuration()V
+    .locals 2
+    # Do not arm a delayed session start if the Compose host is unavailable.
+    # Otherwise a later visit to DurationActivity could unexpectedly start it.
+    sget-object v0, Lcom/v1f/app/patch/HomeQuickNav;->selected:Landroidx/compose/runtime/MutableState;
+    if-eqz v0, :unavailable
+    invoke-interface {v0}, Landroidx/compose/runtime/MutableState;->getValue()Ljava/lang/Object;
+    move-result-object v0
+    if-eqz v0, :unavailable
+    const/4 v1, 0x1
+    sput-boolean v1, Lcom/v1f/app/patch/HomeQuickNav;->pendingStart:Z
+    check-cast v0, Ljava/util/Set;
+    invoke-static {v0}, Lcom/v1f/app/patch/DurationActivity;->open(Ljava/util/Set;)V
+    return-void
+    :unavailable
+    const/4 v1, 0x0
+    sput-boolean v1, Lcom/v1f/app/patch/HomeQuickNav;->pendingStart:Z
     return-void
 .end method
 
