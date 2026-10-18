@@ -138,7 +138,7 @@ def main(root):
     return-object v0
 .end method
 ''')
-    for name, method in [("QuickDurationAction", "openDuration"), ("QuickAppsAction", "openApplications"), ("QuickSitesAction", "openWebsites")]:
+    for name, method in [("QuickDurationAction", "openDuration")]:
         (p.parent / (name + ".smali")).write_text(f'''.class public final Lcom/v1f/app/patch/{name};
 .super Lkotlin/jvm/internal/Lambda;
 .implements Lkotlin/jvm/functions/Function0;
@@ -167,7 +167,7 @@ def main(root):
     return-object v0
 .end method
 ''')
-    for name, method in [("QuickStartAction", "startProtection"), ("QuickPermissionsAction", "openPermissions")]:
+    for name, method in [("QuickStartAction", "startProtection")]:
         (p.parent / (name + ".smali")).write_text(f""".class public final Lcom/v1f/app/patch/{name};
 .super Lkotlin/jvm/internal/Lambda;
 .implements Lkotlin/jvm/functions/Function0;
@@ -230,26 +230,6 @@ def main(root):
     const/4 v1, 0x0
     sput-boolean v1, Lcom/v1f/app/patch/HomeQuickNav;->pendingStart:Z
     return v0
-.end method
-
-.method public static openApplications()V
-    .locals 2
-    sget-object v0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
-    if-eqz v0, :done
-    sget-object v1, Lcom/v1f/app/ui/V1FScreen;->Applications:Lcom/v1f/app/ui/V1FScreen;
-    invoke-interface {v0, v1}, Landroidx/compose/runtime/MutableState;->setValue(Ljava/lang/Object;)V
-    :done
-    return-void
-.end method
-
-.method public static openWebsites()V
-    .locals 2
-    sget-object v0, Lcom/v1f/app/patch/HomeQuickNav;->screen:Landroidx/compose/runtime/MutableState;
-    if-eqz v0, :done
-    sget-object v1, Lcom/v1f/app/ui/V1FScreen;->Websites:Lcom/v1f/app/ui/V1FScreen;
-    invoke-interface {v0, v1}, Landroidx/compose/runtime/MutableState;->setValue(Ljava/lang/Object;)V
-    :done
-    return-void
 .end method
 
 .method public static openDuration()V
