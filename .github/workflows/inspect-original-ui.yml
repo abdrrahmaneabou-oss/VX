@@ -22,6 +22,14 @@ jobs:
           cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
           curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
           java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
+          echo '==== Accessibility service complete event method ===='
+          f=$(find build/decompiled -name 'AppBlockAccessibilityService.smali' | head -n1)
+          sed -n '/^.method public onAccessibilityEvent(/,/^.end method/p' "$f" | head -n 250
+          echo '==== Lock method ===='
+          sed -n '/^.method private final showApplicationLock(/,/^.end method/p' "$f" | head -n 150
+          echo '==== RememberedApps selected methods ===='
+          f=$(find build/decompiled -name 'RememberedApps.smali' | head -n1)
+          grep -n -E '^.method|\.field' "$f" | head -n 100
           echo '==== RememberedApps class ===='
           f=$(find build/decompiled -name 'RememberedApps.smali' | head -n1); echo "$f"; cat "$f" | head -n 280
           echo '==== Selection screen remembered load context ===='
