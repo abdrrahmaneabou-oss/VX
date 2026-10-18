@@ -31,3 +31,11 @@ jobs:
           grep -R -l 'V1FMainScreen\|MainScreen\|HomeScreen\|Celestial' build/decompiled/smali_classes*/*/v1f/app 2>/dev/null | head -n 45 || true
           echo '==== MainActivity complete ===='
           cat "$MAIN"
+          echo '==== HomeScreen methods and UI call sites ===='
+          HOME="$(find build/decompiled -name HomeScreenKt.smali | head -n1)"
+          grep -nE '^\\.method|CelestialButton|Scaffold|Column\\(|Button\\(|Text\\(' "$HOME" | head -n 160
+          echo '==== HomeScreen composable method beginning ===='
+          sed -n '1,360p' "$HOME"
+          echo '==== Compose singleton root ===='
+          SING="$(find build/decompiled -name 'ComposableSingletons\\$MainActivityKt.smali' | head -n1)"
+          test -z "$SING" || grep -nE 'HomeScreen|V1FApp|\\.method' "$SING" | head -n 90
