@@ -34,6 +34,20 @@ def main(root):
     # This removes the old Permissions -> Applications forced progression.
     host = unique(root, 'V1FAppKt$V1FApp$2$1$2.smali')
     hs = host.read_text()
+    # The primary Home action is permission-dependent in the original APK:
+    # ready -> Applications, not-ready -> Permissions. Since the first card
+    # is now explicitly Permissions, both paths must target Permissions.
+    # Apps has its own direct callback in patch_native_protection_list.py.
+    primary_start = hs.find('.method private static final invoke$lambda$3$lambda$2(')
+    primary_end = hs.find('.end method', primary_start)
+    if primary_start < 0 or primary_end < 0:
+        raise RuntimeError("Original primary home callback missing")
+    primary = hs[primary_start:primary_end]
+    old_destination = 'Lcom/v1f/app/ui/V1FScreen;->Applications:Lcom/v1f/app/ui/V1FScreen;'
+    new_destination = 'Lcom/v1f/app/ui/V1FScreen;->Permissions:Lcom/v1f/app/ui/V1FScreen;'
+    if primary.count(old_destination) != 1 or primary.count(new_destination) != 1:
+        raise RuntimeError("Unexpected permission-dependent primary callback")
+    hs = hs[:primary_start] + primary.replace(old_destination, new_destination, 1) + hs[primary_end:]
     invocation = '    invoke-static/range {v1 .. v8}, Lcom/v1f/app/ui/screens/PermissionsScreenKt;->PermissionsScreen('
     if hs.count(invocation) != 1:
         raise RuntimeError("Permissions screen callsite changed")
