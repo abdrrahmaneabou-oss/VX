@@ -34,8 +34,8 @@ public final class DynamicLabelsActivity extends Activity {
     private static final int CYAN = Color.rgb(91, 210, 238);
     private static final int PURPLE = Color.rgb(144, 117, 252);
     private EditText editor;
-    private TextView intervalValue, lockStatus, countLabel, editHint, randomStatus;
-    private Button minus, plus, save, reset;
+    private TextView intervalValue, lockStatus, countLabel, editHint, randomStatus, randomDurationValue;
+    private Button minus, plus, randomMinus, randomPlus, save, reset;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean locked;
     private boolean restoringText;
@@ -124,9 +124,28 @@ public final class DynamicLabelsActivity extends Activity {
 
         LinearLayout randomCard = card();
         randomCard.addView(label("✦  الحظر الشامل العشوائي", 20, INK, true));
-        TextView randomHelp = label("عند اختيار حظر لمدة 24 ساعة أو أكثر، يحظر النظام التطبيقات التي ثبّتها المستخدم لمدة 15 دقيقة عشوائية في كل ساعة، باستثناء تطبيق الهاتف.", 13, MUTED, false);
+        TextView randomHelp = label("عند اختيار حظر لمدة 24 ساعة أو أكثر، يحظر النظام التطبيقات التي ثبّتها المستخدم لفترة عشوائية في كل ساعة، باستثناء تطبيق الهاتف.", 13, MUTED, false);
         randomHelp.setPadding(0, dp(10), 0, dp(12));
         randomCard.addView(randomHelp);
+        LinearLayout randomDurationRow = row();
+        randomDurationRow.setGravity(Gravity.CENTER_VERTICAL);
+        randomMinus = button("−", false);
+        randomDurationRow.addView(randomMinus, new LinearLayout.LayoutParams(dp(56), dp(56)));
+        LinearLayout randomDurationMiddle = column();
+        randomDurationMiddle.setGravity(Gravity.CENTER);
+        randomDurationValue = label("", 25, INK, true);
+        randomDurationValue.setGravity(Gravity.CENTER);
+        randomDurationMiddle.addView(randomDurationValue);
+        TextView randomDurationTag = label("مدة الحظر الشامل في كل ساعة", 11, MUTED, false);
+        randomDurationTag.setGravity(Gravity.CENTER);
+        randomDurationMiddle.addView(randomDurationTag);
+        randomDurationRow.addView(randomDurationMiddle, new LinearLayout.LayoutParams(0, dp(62), 1f));
+        randomPlus = button("+", false);
+        randomDurationRow.addView(randomPlus, new LinearLayout.LayoutParams(dp(56), dp(56)));
+        randomCard.addView(randomDurationRow);
+        TextView randomDurationHelp = label("من دقيقة إلى 45 دقيقة  •  يُحفظ التغيير فورًا", 12, MUTED, false);
+        randomDurationHelp.setPadding(0, dp(8), 0, dp(13));
+        randomCard.addView(randomDurationHelp);
         randomStatus = label("", 14, CYAN, true);
         randomStatus.setPadding(dp(12), dp(12), dp(12), dp(12));
         randomStatus.setBackground(shape(Color.rgb(13, 33, 49), 13, Color.rgb(46, 115, 143)));
@@ -203,6 +222,16 @@ public final class DynamicLabelsActivity extends Activity {
             if (!requireEditable()) return;
             BreakIntervalStore.adjustHours(1);
             refreshInterval();
+            refreshPolicy();
+        });
+        randomMinus.setOnClickListener(v -> {
+            if (!requireEditable()) return;
+            RandomFullBlock.adjustMinutes(this, -1);
+            refreshPolicy();
+        });
+        randomPlus.setOnClickListener(v -> {
+            if (!requireEditable()) return;
+            RandomFullBlock.adjustMinutes(this, 1);
             refreshPolicy();
         });
         save.setOnClickListener(v -> {
@@ -337,6 +366,8 @@ public final class DynamicLabelsActivity extends Activity {
         if (editor != null) editor.setEnabled(canEdit);
         if (minus != null) minus.setEnabled(canEdit && BreakIntervalStore.getHours() > 1);
         if (plus != null) plus.setEnabled(canEdit && BreakIntervalStore.getHours() < 24);
+        if (randomMinus != null) randomMinus.setEnabled(canEdit && RandomFullBlock.getMinutes(this) > 1);
+        if (randomPlus != null) randomPlus.setEnabled(canEdit && RandomFullBlock.getMinutes(this) < 45);
         if (save != null) save.setEnabled(canEdit);
         if (reset != null) reset.setEnabled(canEdit);
         if (editor != null && locked) {
@@ -352,6 +383,7 @@ public final class DynamicLabelsActivity extends Activity {
         updateCount();
         updateDirtyState();
         refreshInterval();
+        if (randomDurationValue != null) randomDurationValue.setText(RandomFullBlock.getMinutes(this) + " دقيقة");
         if (randomStatus != null) randomStatus.setText(RandomFullBlock.status(this));
     }
     private void updateDirtyState() {
