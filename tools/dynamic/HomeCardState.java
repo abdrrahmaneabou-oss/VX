@@ -22,7 +22,7 @@ public final class HomeCardState {
     return false;
   }
   public static String permissionLabel() {
-    return accessibilityReady() ? "الصلاحيات" : "🔴 الصلاحيات";
+    return "الصلاحيات";
   }
   public static String durationLabel() {
     Activity activity = DynamicLabelsEntry.getHost();
