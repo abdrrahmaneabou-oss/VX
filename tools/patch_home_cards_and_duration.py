@@ -53,8 +53,10 @@ def main(root):
     return-void
 .end method"""
     s = s[:callback.start()] + save + s[callback.end():]
-    # Replace only button label, not the screen's explanatory text.
-    s = s.replace('const-string v', 'const-string v') 
+    # Only the duration editor button is renamed; activation has its own home card.
+    old_button = 'const-string v1, "\\u0628\\u062f\\u0621 \\u0627\\u0644\\u062d\\u0645\\u0627\\u064a\\u0629"'
+    if s.count(old_button) != 1: raise RuntimeError("Duration action label missing")
+    s = s.replace(old_button, 'const-string v1, "حفظ"', 1)
     # The dedicated start action sets a flag before opening this Activity.
     if '.method protected onResume()V' in s: raise RuntimeError("Unexpected pre-existing onResume")
     s += """
