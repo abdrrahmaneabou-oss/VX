@@ -27,6 +27,11 @@ jobs:
           echo '==== Native insertion context ===='
           TARGET="$(find build/decompiled -name 'HomeScreenKt$HomeScreen$3$1$8.smali' | head -n1)"
           sed -n '360,630p' "$TARGET"
+          echo '==== Readiness logic ===='
+          sed -n '/^.method public final getAllReady()/,/^.end method/p' build/decompiled/smali_classes9/com/v1f/app/model/PermissionSnapshot.smali
+          sed -n '/^.method public final getCompletedCount()/,/^.end method/p' build/decompiled/smali_classes9/com/v1f/app/model/PermissionSnapshot.smali
+          echo '==== Readiness usage ===='
+          grep -R -n 'PermissionSnapshot;->getAllReady' build/decompiled/smali_classes*/com/v1f/app 2>/dev/null | head -n 85
           echo '==== PermissionSnapshot model ===='
           cat build/decompiled/smali_classes9/com/v1f/app/model/PermissionSnapshot.smali | head -n 320
           echo '==== PermissionRepository key methods ===='
