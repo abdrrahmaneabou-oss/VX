@@ -22,7 +22,7 @@ def main(root):
 
     duration = unique(root, 'DurationActivity.smali')
     s = duration.read_text()
-    callback = re.search(r'(?ms)^\\.method synthetic lambda\\$5\\$com-v1f-app-patch-DurationActivity\\(Landroid/view/View;\\)V.*?^\\.end method', s)
+    callback = re.search(r'(?ms)^\.method synthetic lambda\$5\$com-v1f-app-patch-DurationActivity\(Landroid/view/View;\)V.*?^\.end method', s)
     if not callback: raise RuntimeError("Duration save click callback not found")
     save = """.method synthetic lambda$5$com-v1f-app-patch-DurationActivity(Landroid/view/View;)V
     .locals 4
