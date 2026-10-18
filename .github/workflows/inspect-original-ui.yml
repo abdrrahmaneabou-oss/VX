@@ -1,0 +1,33 @@
+name: Inspect V2F original Compose UI
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/inspect-original-ui.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare base and decode
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/base build/tools
+          curl -fL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/abdrrahmaneabou-oss/VX/actions/artifacts/11703717746/zip -o build/base/base.zip
+          unzip -o build/base/base.zip -d build/base
+          cp "$(find build/base -name '*.apk' | head -n1)" build/base.apk
+          curl -fL -o build/tools/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar
+          java -jar build/tools/apktool.jar d -f build/base.apk -o build/decompiled
+          echo '==== MainActivity methods ===='
+          MAIN="$(find build/decompiled -name MainActivity.smali | head -n1)"
+          grep -nE '^\.method|setContent|Composable|attachStatus|DynamicLabelsEntry' "$MAIN" | head -n 120
+          echo '==== MainActivity content lambda names ===='
+          find build/decompiled -name 'MainActivity*.smali' | head -n 35
+          echo '==== UI entry references ===='
+          grep -R -l 'V1FMainScreen\|MainScreen\|HomeScreen\|Celestial' build/decompiled/smali_classes*/*/v1f/app 2>/dev/null | head -n 45 || true
+          echo '==== MainActivity complete ===='
+          cat "$MAIN"
