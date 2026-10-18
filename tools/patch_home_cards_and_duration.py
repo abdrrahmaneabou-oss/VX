@@ -39,6 +39,13 @@ def main(root):
     if hs.count(invocation) != 1:
         raise RuntimeError("Permissions screen callsite changed")
     hs = hs.replace(invocation, '    move-object v4, v3\n\n' + invocation, 1)
+    # The native apps completion callback already persists the selected set
+    # and navigates Home. Its extra DurationActivity launch is legacy wizard
+    # behavior and must not happen on Save.
+    old_launch = '    invoke-static {p2}, Lcom/v1f/app/patch/DurationActivity;->open(Ljava/util/Set;)V'
+    if hs.count(old_launch) != 1:
+        raise RuntimeError("Apps completion legacy duration launch not found uniquely")
+    hs = hs.replace(old_launch, '    # V2F_APPS_SAVE_RETURN_HOME: preserve selection and Home transition', 1)
     host.write_text(hs)
 
     duration = unique(root, 'DurationActivity.smali')
