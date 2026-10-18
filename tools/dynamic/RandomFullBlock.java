@@ -17,6 +17,9 @@ public final class RandomFullBlock {
     private static long[] starts = new long[0];
     private static long lastElapsed = -1L;
     private static Context appContext;
+    private static android.os.Handler pollHandler;
+    private static Runnable pollTask;
+    private static long lastForcedAt;
     private RandomFullBlock() {}
 
     private static Object call(Object target, String name) throws Exception {
@@ -65,7 +68,11 @@ public final class RandomFullBlock {
         int type = event.getEventType();
         if (type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
                 type != AccessibilityEvent.TYPE_WINDOWS_CHANGED) return false;
-        String pkg = event.getPackageName().toString();
+        return shouldBlockPackage(service, event.getPackageName().toString());
+    }
+
+    private static boolean shouldBlockPackage(AccessibilityService service, String pkg) {
+        if (pkg == null) return false;
         if (pkg.equals(service.getPackageName()) || pkg.equals("com.android.dialer") ||
                 pkg.equals("com.google.android.dialer") || pkg.equals("com.android.phone") ||
                 pkg.equals("com.android.server.telecom") || pkg.equals("com.android.incallui") ||
@@ -97,6 +104,42 @@ public final class RandomFullBlock {
         } catch (Throwable ignored) {
             return false; // Keep the original selective blocking when introspection fails.
         }
+    }
+
+    /** Catch apps already foreground when the 15-minute window starts. */
+    public static synchronized void attach(final AccessibilityService service) {
+        detach(service);
+        pollHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        pollTask = new Runnable() {
+            @Override public void run() {
+                try {
+                    android.view.accessibility.AccessibilityNodeInfo root = service.getRootInActiveWindow();
+                    if (root != null && root.getPackageName() != null) {
+                        String pkg = root.getPackageName().toString();
+                        if (shouldBlockPackage(service, pkg)) {
+                            long now = android.os.SystemClock.elapsedRealtime();
+                            if (now - lastForcedAt >= 5000L) {
+                                lastForcedAt = now;
+                                Method m = service.getClass().getDeclaredMethod("showApplicationLock", String.class);
+                                m.setAccessible(true);
+                                m.invoke(service, pkg);
+                            }
+                        }
+                    }
+                } catch (Throwable ignored) {}
+                synchronized (RandomFullBlock.class) {
+                    if (pollTask == this && pollHandler != null)
+                        pollHandler.postDelayed(this, 2000L);
+                }
+            }
+        };
+        pollHandler.postDelayed(pollTask, 2000L);
+    }
+
+    public static synchronized void detach(AccessibilityService service) {
+        if (pollHandler != null && pollTask != null) pollHandler.removeCallbacks(pollTask);
+        pollTask = null;
+        pollHandler = null;
     }
 
     public static String status(Context context) {
