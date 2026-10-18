@@ -35,7 +35,7 @@ def main(root):
     const/4 v2, 0x0
     const/4 v3, 0x3
     invoke-static {v0, v2, v1, v2, v3}, Ljava/lang/System;->arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V
-    invoke-direct {p0}, Lcom/v1f/app/patch/DurationActivity;->savePreferences()V
+    invoke-direct {p0}, Lcom/v1f/app/patch/DurationActivity;->savePreferences()V\n    invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->refreshHome()V
     const-string v0, "تم حفظ المدة"
     const/4 v1, 0x0
     invoke-static {p0, v0, v1}, Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;
