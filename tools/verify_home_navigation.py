@@ -42,8 +42,15 @@ def verify(root):
     first = home.index('CelestialButtonKt;->CelestialButton(')
     assert 'QuickPermissionsAction' not in home[:first]
     assert home.count('AppsCardAction;-><init>(Lkotlin/jvm/functions/Function0;)V') == 1
+    assert home.count('QuickExemptionsAction;->INSTANCE:') == 1
+    assert home.index('QuickExemptionsAction;->INSTANCE:') < home.index('QuickStartAction;->INSTANCE:')
     assert home.count('->$onPrimaryAction:Lkotlin/jvm/functions/Function0;') >= 2
     nav = read('HomeQuickNav.smali')
+    exemptions = method(nav, 'openExemptions')
+    assert 'FullBlockExemptionsActivity;->openFromCompose()V' in exemptions
+    assert 'startProtection' not in exemptions and 'pendingStart' not in exemptions
+    manifest = (root / 'AndroidManifest.xml').read_text()
+    assert manifest.count('android:name="com.v1f.app.patch.FullBlockExemptionsActivity"') == 1
     # V1FScreen is package-private: patch-package helpers cannot reference it.
     assert 'Lcom/v1f/app/ui/V1FScreen;' not in nav
     consume = method(nav, 'consumeAppsCard')

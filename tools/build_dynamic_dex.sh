@@ -19,6 +19,9 @@ javac -source 8 -target 8 \
   tools/dynamic/BreakIntervalStore.java \
   tools/dynamic/StrictBlockPolicy.java \
   tools/dynamic/RandomFullBlock.java \
+  tools/dynamic/FullBlockRules.java \
+  tools/dynamic/FullBlockSettings.java \
+  tools/dynamic/FullBlockExemptionsActivity.java \
   tools/dynamic/DefaultSelections.java \
   tools/dynamic/GuardBridgeGrace.java \
   tools/dynamic/DynamicLabelsActivity.java \

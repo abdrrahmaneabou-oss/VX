@@ -38,6 +38,7 @@ def main(root):
         ("◷ مدة الحظر", "QuickDurationAction"),
         ("▣ اختيار التطبيقات", "QuickAppsAction"),
         ("◎ اختيار المواقع", "QuickSitesAction"),
+        ("☷ استثناءات الحظر الشامل", "QuickExemptionsAction"),
     ]:
         label = ('invoke-static {}, Lcom/v1f/app/patch/HomeCardState;->durationLabel()Ljava/lang/String;\n\n    move-result-object v7' if callback == "QuickDurationAction" else f'const-string v7, "{title}"')
         action_load = (
@@ -138,7 +139,7 @@ def main(root):
     return-object v0
 .end method
 ''')
-    for name, method in [("QuickDurationAction", "openDuration")]:
+    for name, method in [("QuickDurationAction", "openDuration"), ("QuickExemptionsAction", "openExemptions")]:
         (p.parent / (name + ".smali")).write_text(f'''.class public final Lcom/v1f/app/patch/{name};
 .super Lkotlin/jvm/internal/Lambda;
 .implements Lkotlin/jvm/functions/Function0;
@@ -285,6 +286,12 @@ def main(root):
     const/4 v1, 0x0
     sput-boolean v1, Lcom/v1f/app/patch/HomeQuickNav;->pendingStart:Z
     return v0
+.end method
+
+.method public static openExemptions()V
+    .locals 0
+    invoke-static {}, Lcom/v1f/app/patch/FullBlockExemptionsActivity;->openFromCompose()V
+    return-void
 .end method
 
 .method public static openDuration()V

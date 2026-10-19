@@ -6,20 +6,14 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.view.accessibility.AccessibilityEvent;
 import java.lang.reflect.Method;
-import java.security.SecureRandom;
 
-/** Hourly, session-bound random configurable block for user-installed apps. */
+
+/** Session-bound block in the final minutes of each local clock hour. */
 public final class RandomFullBlock {
     private static final long HOUR = 3600000L;
     private static final int DEFAULT_MINUTES = 15;
     private static final String PREFS = "vx_random_full_block";
     private static final String KEY_MINUTES = "window_minutes";
-    private static int cachedMinutes = -1;
-    private static final SecureRandom RNG = new SecureRandom();
-    private static String sessionId = "";
-    private static long[] starts = new long[0];
-    private static long lastElapsed = -1L;
-    private static Context appContext;
     private static android.os.Handler pollHandler;
     private static Runnable pollTask;
     private static long lastForcedAt;
@@ -47,59 +41,9 @@ public final class RandomFullBlock {
         return next;
     }
 
-    private static synchronized boolean windowActive(Context context, long elapsed, String id) {
-        appContext = context.getApplicationContext();
-        int minutes = getMinutes(context);
-        if (minutes != cachedMinutes) {
-            cachedMinutes = minutes;
-            starts = new long[0];
-        }
-        if (!id.equals(sessionId) || (lastElapsed >= 0 && elapsed + 120000L < lastElapsed)) {
-            sessionId = id;
-            starts = new long[0];
-        }
-        lastElapsed = elapsed;
-        long index = elapsed / HOUR;
-        if (index < 0 || index >= 100000) return false;
-        if (index >= starts.length) {
-            int required = (int) index + 1;
-            long[] expanded = new long[required];
-            System.arraycopy(starts, 0, expanded, 0, starts.length);
-            for (int i = starts.length; i < required; i++) {
-                // Every window fits inside its hour. The minimum free gap equals
-                // the user-selected blocking duration; impossible hours are skipped.
-                android.content.SharedPreferences prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-                String key = id + ":gap-v2:minutes:" + minutes + ":hour:" + i;
-                long hourStart = i * HOUR;
-                long durationMs = minutes * 60000L;
-                long earliest = hourStart;
-                // Find the most recent actual block, skipping empty hours.
-                for (int previous = i - 1; previous >= 0; previous--) {
-                    if (expanded[previous] >= 0) {
-                        earliest = Math.max(earliest,
-                                previous * HOUR + expanded[previous] + 2L * durationMs);
-                        break;
-                    }
-                }
-                long latest = hourStart + HOUR - durationMs;
-                if (earliest > latest) {
-                    expanded[i] = -1L; // Cannot fit a complete block plus full rest.
-                    continue;
-                }
-                int firstMinute = (int)((earliest - hourStart + 59999L) / 60000L);
-                int lastMinute = 60 - minutes;
-                int minute = prefs.getInt(key, -1);
-                if (minute < firstMinute || minute > lastMinute) {
-                    minute = firstMinute + RNG.nextInt(lastMinute - firstMinute + 1);
-                    prefs.edit().putInt(key, minute).apply();
-                }
-                expanded[i] = minute * 60000L;
-            }
-            starts = expanded;
-        }
-        long minuteInHour = elapsed % HOUR;
-        return starts[(int)index] >= 0 && minuteInHour >= starts[(int)index] &&
-                minuteInHour < starts[(int)index] + minutes * 60000L;
+    private static boolean windowActive(Context context) {
+        return FullBlockRules.windowActive(System.currentTimeMillis(),
+                java.util.TimeZone.getDefault(), getMinutes(context));
     }
 
     public static boolean shouldBlock(AccessibilityService service, AccessibilityEvent event) {
@@ -111,11 +55,7 @@ public final class RandomFullBlock {
     }
 
     private static boolean shouldBlockPackage(AccessibilityService service, String pkg) {
-        if (pkg == null) return false;
-        if (pkg.equals(service.getPackageName()) || pkg.equals("com.android.dialer") ||
-                pkg.equals("com.google.android.dialer") || pkg.equals("com.android.phone") ||
-                pkg.equals("com.android.server.telecom") || pkg.equals("com.android.incallui") ||
-                pkg.equals("com.google.android.apps.dialer")) return false;
+        if (pkg == null || FullBlockSettings.isExempt(service, pkg)) return false;
         try {
             Object repository = sessionRepository();
             Object session = call(call(repository, "getSession"), "getValue");
@@ -126,10 +66,21 @@ public final class RandomFullBlock {
             if (remaining <= 0 || remaining > duration) return false;
             // The existing break runtime is authoritative: never override its free minute.
             if (StrictBlockPolicy.allowsAll()) return false;
-            String id = String.valueOf(call(session, "getId"));
-            long elapsed = duration - remaining;
-            if (!windowActive(service, elapsed, id)) return false;
-            PackageManager pm = service.getPackageManager();
+            if (!windowActive(service)) return false;
+            return eligiblePackage(service, pkg);
+        } catch (Throwable ignored) {
+            return false; // Keep the original selective blocking when introspection fails.
+        }
+    }
+
+    public static boolean eligiblePackage(Context context, String pkg) {
+        if (pkg == null) return false;
+        if (pkg.equals(context.getPackageName()) || pkg.equals("com.android.dialer") ||
+                pkg.equals("com.google.android.dialer") || pkg.equals("com.android.phone") ||
+                pkg.equals("com.android.server.telecom") || pkg.equals("com.android.incallui") ||
+                pkg.equals("com.google.android.apps.dialer")) return false;
+        try {
+            PackageManager pm = context.getPackageManager();
             ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
             // Only apps installed by the user, including updated system apps.
             if ((info.flags & ApplicationInfo.FLAG_SYSTEM) != 0 &&
@@ -140,12 +91,12 @@ public final class RandomFullBlock {
             if (phone != null && phone.activityInfo != null &&
                     pkg.equals(phone.activityInfo.packageName)) return false;
             return true;
-        } catch (Throwable ignored) {
-            return false; // Keep the original selective blocking when introspection fails.
+        } catch (PackageManager.NameNotFoundException ignored) {
+            return false;
         }
     }
 
-    /** Catch apps already foreground when the random window starts. */
+    /** Catch apps already foreground when the hourly window starts. */
     public static synchronized void attach(final AccessibilityService service) {
         detach(service);
         pollHandler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -191,10 +142,9 @@ public final class RandomFullBlock {
             long remaining = ((Number)call(repository, "remainingMillis")).longValue();
             if (remaining <= 0) return "بانتظار بدء جلسة حظر";
             if (StrictBlockPolicy.allowsAll()) return "دقيقة الاستراحة — الحظر الشامل متوقف مؤقتاً";
-            String id = String.valueOf(call(session, "getId"));
-            return windowActive(context, duration - remaining, id) ?
+            return windowActive(context) ?
                     "● الحظر الشامل نشط الآن (" + getMinutes(context) + " دقيقة)" :
-                    "● النظام العشوائي يعمل — موعد الحظر مخفي";
+                    "● الحظر من الدقيقة " + (60 - getMinutes(context)) + " حتى بداية الساعة التالية";
         } catch (Throwable ignored) {
             return "يتفعّل تلقائياً عند حظر 24 ساعة أو أكثر";
         }

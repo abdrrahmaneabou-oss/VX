@@ -130,8 +130,8 @@ public final class DynamicLabelsActivity extends Activity {
         content.addView(intervalCard, section());
 
         LinearLayout randomCard = card();
-        randomCard.addView(label("✦  الحظر الشامل العشوائي", 20, INK, true));
-        TextView randomHelp = label("عند اختيار حظر لمدة 24 ساعة أو أكثر، يحظر النظام التطبيقات التي ثبّتها المستخدم لفترة عشوائية في كل ساعة، باستثناء تطبيق الهاتف.", 13, MUTED, false);
+        randomCard.addView(label("✦  الحظر الشامل الدوري", 20, INK, true));
+        TextView randomHelp = label("عند اختيار حظر لمدة 24 ساعة أو أكثر، يحظر النظام التطبيقات التي ثبّتها المستخدم في آخر دقائق كل ساعة حسب المدة المختارة، باستثناء تطبيق الهاتف والاستثناءات المحفوظة.", 13, MUTED, false);
         randomHelp.setPadding(0, dp(10), 0, dp(12));
         randomCard.addView(randomHelp);
         LinearLayout randomDurationRow = row();
@@ -157,7 +157,7 @@ public final class DynamicLabelsActivity extends Activity {
         randomStatus.setPadding(dp(12), dp(12), dp(12), dp(12));
         randomStatus.setBackground(shape(Color.rgb(13, 33, 49), 13, Color.rgb(46, 115, 143)));
         randomCard.addView(randomStatus);
-        TextView randomBreak = label("✓ دقيقة الاستراحة لها الأولوية دائماً. لا تُعرض المواعيد العشوائية مسبقاً.", 12, MUTED, false);
+        TextView randomBreak = label("✓ الحظر ينتهي عند بداية الساعة التالية حسب ساعة الهاتف. دقيقة الاستراحة لها الأولوية دائماً.", 12, MUTED, false);
         randomBreak.setPadding(0, dp(12), 0, 0);
         randomCard.addView(randomBreak);
         content.addView(randomCard, section());

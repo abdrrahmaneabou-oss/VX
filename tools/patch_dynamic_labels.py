@@ -30,6 +30,10 @@ def patch_manifest(root: Path) -> None:
         'android:name="com.v1f.app.patch.DynamicLabelsActivity" '
         'android:screenOrientation="portrait" '
         'android:theme="@style/Theme.V1F.Duration"/>\n'
+        '        <activity android:exported="false" '
+        'android:name="com.v1f.app.patch.FullBlockExemptionsActivity" '
+        'android:screenOrientation="portrait" '
+        'android:theme="@style/Theme.V1F.Duration"/>\n'
     )
     if "</application>" not in text:
         raise RuntimeError("Manifest has no application closing tag")
