@@ -20,6 +20,7 @@ javac -source 8 -target 8 \
   tools/dynamic/StrictBlockPolicy.java \
   tools/dynamic/RandomFullBlock.java \
   tools/dynamic/FullBlockRules.java \
+  tools/dynamic/FullBlockCountdownView.java \
   tools/dynamic/FullBlockSettings.java \
   tools/dynamic/FullBlockExemptionsActivity.java \
   tools/dynamic/DefaultSelections.java \

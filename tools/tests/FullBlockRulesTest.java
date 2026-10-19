@@ -20,6 +20,11 @@ public final class FullBlockRulesTest {
                 check(FullBlockRules.windowActive(start, tz, minutes), "exact start " + zone);
                 check(FullBlockRules.windowActive(end - 1, tz, minutes), "last millisecond " + zone);
                 check(!FullBlockRules.windowActive(end, tz, minutes), "next hour " + zone);
+                check(FullBlockRules.remainingMillis(start, tz, minutes) == minutes * 60000L, "full duration");
+                check(FullBlockRules.remainingMillis(end - 300000L, tz, 15) == 300000L, "five minutes left");
+                check(FullBlockRules.remainingMillis(end - 1, tz, minutes) == 1, "one millisecond left");
+                check(FullBlockRules.remainingMillis(end, tz, minutes) == 0, "hide at next hour");
+                check(FullBlockRules.remainingMillis(start - 1, tz, minutes) == 0, "hide before window");
                 check(FullBlockRules.windowActive(start + 3600000, tz, minutes), "repeats every hour");
             }
         }
@@ -28,6 +33,12 @@ public final class FullBlockRulesTest {
             check(FullBlockRules.windowActive(java.time.OffsetDateTime.parse(value).toInstant().toEpochMilli(),
                     TimeZone.getTimeZone("America/New_York"), 10), "DST repeated hour");
         Set<String> exempt = new HashSet<>();
+        check(FullBlockRules.countdownText(300000).equals("الحظر الشامل: 5 دقائق متبقية"), "requested label");
+        check(FullBlockRules.countdownText(240001).equals("الحظر الشامل: 5 دقائق متبقية"), "round partial minute up");
+        check(FullBlockRules.countdownText(240000).equals("الحظر الشامل: 4 دقائق متبقية"), "minute boundary");
+        check(FullBlockRules.countdownText(1).contains("دقيقة واحدة"), "never show zero while active");
+        check(FullBlockRules.countdownText(0).isEmpty(), "hide when inactive");
+        check(FullBlockRules.countdownText(-1).isEmpty(), "hide after expiration");
         check(FullBlockRules.included(exempt, "app.a"), "default checked");
         exempt.add("app.a"); exempt.add("app.b"); exempt.add("app.c");
         check(!FullBlockRules.included(exempt, "app.a"), "unchecked app exempt");
@@ -36,6 +47,6 @@ public final class FullBlockRulesTest {
         draft.remove("app.a");
         check(!FullBlockRules.included(exempt, "app.a"), "draft does not change saved selection");
         check(FullBlockRules.included(draft, "app.a"), "recheck removes exemption");
-        System.out.println("PASS: hourly boundaries, local zones, DST, default inclusion and exemptions");
+        System.out.println("PASS: hourly boundaries, local zones, DST, exemptions and live countdown rounding/expiry");
     }
 }

@@ -64,7 +64,13 @@ def verify(root):
     assert '.catchall' in invoke and 'move-exception v0' in invoke
     assert invoke.count('HomeQuickNav;->clearAppsCard()V') == 2
     assert 'throw v0' in invoke  # Clean up, but never hide a real callback failure.
+    lock = read('LockActivity.smali')
+    assert 'vxUnlockAt:J' in method(lock, 'returnToLauncher')
+    assert 'FullBlockCountdownView;->attach(Landroid/app/Activity;)V' in method(lock, 'render')
+    assert 'FullBlockCountdownView;->attach(Landroid/app/Activity;)V' in method(lock, 'onStart')
+    assert 'FullBlockCountdownView;->stop(Landroid/app/Activity;)V' in method(lock, 'onStop')
     print('PASS: permission-only UI, 3 tiles, callback routing, marker cleanup, apps save, enum access')
+    print('PASS: lock countdown render/start/stop hooks and original exit gate')
 
 
 if __name__ == '__main__':

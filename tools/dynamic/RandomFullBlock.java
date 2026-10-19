@@ -55,21 +55,28 @@ public final class RandomFullBlock {
     }
 
     private static boolean shouldBlockPackage(AccessibilityService service, String pkg) {
-        if (pkg == null || FullBlockSettings.isExempt(service, pkg)) return false;
+        return remainingMillis(service, pkg) > 0;
+    }
+
+    /** Shared eligibility for enforcement and the lock screen; zero means no hourly block. */
+    public static long remainingMillis(Context context, String pkg) {
         try {
+            if (pkg == null || FullBlockSettings.isExempt(context, pkg)) return 0;
             Object repository = sessionRepository();
             Object session = call(call(repository, "getSession"), "getValue");
-            if (session == null) return false;
+            if (session == null) return 0;
             long duration = ((Number)call(session, "getDurationMillis")).longValue();
-            if (duration < 24L * HOUR) return false;
+            if (duration < 24L * HOUR) return 0;
             long remaining = ((Number)call(repository, "remainingMillis")).longValue();
-            if (remaining <= 0 || remaining > duration) return false;
+            if (remaining <= 0 || remaining > duration) return 0;
             // The existing break runtime is authoritative: never override its free minute.
-            if (StrictBlockPolicy.allowsAll()) return false;
-            if (!windowActive(service)) return false;
-            return eligiblePackage(service, pkg);
+            if (StrictBlockPolicy.allowsAll()) return 0;
+            long hourlyRemaining = FullBlockRules.remainingMillis(System.currentTimeMillis(),
+                    java.util.TimeZone.getDefault(), getMinutes(context));
+            if (hourlyRemaining <= 0 || !eligiblePackage(context, pkg)) return 0;
+            return Math.min(hourlyRemaining, remaining);
         } catch (Throwable ignored) {
-            return false; // Keep the original selective blocking when introspection fails.
+            return 0; // Keep the original selective blocking when introspection fails.
         }
     }
 
