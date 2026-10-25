@@ -26,6 +26,7 @@ javac -source 8 -target 8 \
 
 # The stub only exists to satisfy javac. The real class is already in classes4.dex.
 rm -rf build/dynamic-classes/com/v1f/app/protection/modules/settings
+rm -rf build/dynamic-classes/com/v1f/app/protection/overlay
 
 mapfile -t CLASSES < <(find build/dynamic-classes -name '*.class' -print)
 if [ "${#CLASSES[@]}" -eq 0 ]; then
