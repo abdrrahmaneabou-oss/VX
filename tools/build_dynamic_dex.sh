@@ -22,7 +22,8 @@ javac -source 8 -target 8 \
   tools/dynamic/BreakIntervalEntry.java \
   tools/dynamic/RobustSettingsGuard.java \
   tools/dynamic/stubs/com/v1f/app/protection/overlay/MeteorShieldOverlay.java \
-  tools/dynamic/SettingsBackCoordinator.java
+  tools/dynamic/SettingsBackCoordinator.java \
+  tools/dynamic/SettingsReturnEngine.java
 
 # The stub only exists to satisfy javac. The real class is already in classes4.dex.
 rm -rf build/dynamic-classes/com/v1f/app/protection/modules/settings
