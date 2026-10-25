@@ -46,7 +46,11 @@ def main(root):
     observe = (
         "    invoke-static/range {p0 .. p1}, " + COORD +
         "->observe(Landroid/accessibilityservice/AccessibilityService;"
-        "Landroid/view/accessibility/AccessibilityEvent;)V\n"
+        "Landroid/view/accessibility/AccessibilityEvent;)Z\n"
+        "    move-result v0\n"
+        "    if-eqz v0, :v2f_return_event_not_consumed\n"
+        "    return-void\n"
+        "    :v2f_return_event_not_consumed\n"
     )
     source = modify_method(
         source,
