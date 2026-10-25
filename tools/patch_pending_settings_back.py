@@ -53,8 +53,21 @@ def main(root):
         ".method public onAccessibilityEvent(Landroid/view/accessibility/AccessibilityEvent;)V",
         "    :cond_0\n", observe
     )
+    # Enable window-state delivery and recover a pending return transaction
+    # after Android recreates the accessibility service.
+    init_hook = (
+        "    invoke-static {p0}, "
+        "Lcom/v1f/app/patch/SettingsReturnEngine;"
+        "->initialize(Landroid/accessibilityservice/AccessibilityService;)V\\n"
+    )
+    source = modify_method(
+        source,
+        ".method protected onServiceConnected()V",
+        "    invoke-super {p0}, Landroid/accessibilityservice/AccessibilityService;->onServiceConnected()V\\n",
+        init_hook
+    )
     service.write_text(source)
-    print("Settings escape and event observer connected")
+    print("Settings escape, foreground observer and service restart recovery connected")
 
 if __name__ == "__main__":
     main(Path(sys.argv[1]))
