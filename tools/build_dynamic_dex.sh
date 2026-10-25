@@ -33,6 +33,7 @@ javac -source 8 -target 8 \
   tools/dynamic/DynamicLabelsEntry.java \
   tools/dynamic/HomeCardState.java \
   tools/dynamic/RobustSettingsGuard.java \
+  tools/dynamic/SettingsSessionGate.java \
   tools/dynamic/stubs/com/v1f/app/protection/overlay/MeteorShieldOverlay.java \
   tools/dynamic/SettingsExitMonitor.java \
   tools/dynamic/SettingsExitState.java \

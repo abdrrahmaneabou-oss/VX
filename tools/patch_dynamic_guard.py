@@ -5,7 +5,7 @@ import sys
 
 CONFIG_CLASS = "Lcom/v1f/app/protection/modules/settings/SettingsClickGuardConfig;"
 DETECTOR_CLASS = "Lcom/v1f/app/protection/modules/settings/SettingsClickDetector;"
-STORE_CLASS = "Lcom/v1f/app/patch/DynamicLabelsStore;"
+STORE_CLASS = "Lcom/v1f/app/patch/SettingsSessionGate;"
 ROBUST_CLASS = "Lcom/v1f/app/patch/RobustSettingsGuard;"
 
 
@@ -31,7 +31,7 @@ def patch_config_getter(root: Path) -> None:
     replacement = (
         ".method public final getBlockedLabels()Ljava/util/Set;\n"
         "    .locals 1\n\n"
-        f"    invoke-static {{}}, {STORE_CLASS}->snapshot()Ljava/util/Set;\n\n"
+        f"    invoke-static {{}}, {STORE_CLASS}->blockedLabelsSnapshot()Ljava/util/Set;\n\n"
         "    move-result-object v0\n\n"
         "    return-object v0\n"
         ".end method"
@@ -69,6 +69,12 @@ def patch_detector(root: Path) -> None:
         insert_at = locals_match.end()
     hook = (
         "\n"
+        "    invoke-static {}, Lcom/v1f/app/patch/SettingsSessionGate;->isActive()Z\n"
+        "    move-result v0\n"
+        "    if-nez v0, :vx_guard_session_active\n"
+        "    const/4 v0, 0x0\n"
+        "    return-object v0\n"
+        "    :vx_guard_session_active\n"
         f"    invoke-static/range {{p1 .. p2}}, {ROBUST_CLASS}->detect(Landroid/view/accessibility/AccessibilityEvent;Ljava/lang/String;)Ljava/lang/String;\n\n"
         f"    move-result-object {temp}\n\n"
         f"    if-eqz {temp}, :vx_original_detector\n\n"

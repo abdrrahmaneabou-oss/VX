@@ -24,7 +24,8 @@ public final class RobustSettingsGuard {
     private RobustSettingsGuard() {}
 
     public static String detect(AccessibilityEvent event, String packageName) {
-        if (event == null || !SETTINGS_PACKAGE.equals(packageName)) return null;
+        if (event == null || !SettingsSessionGate.isActive()
+                || !SETTINGS_PACKAGE.equals(packageName)) return null;
 
         Set<String> blocked = DynamicLabelsStore.snapshot();
         if (blocked == null || blocked.isEmpty()) return null;
