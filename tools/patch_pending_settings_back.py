@@ -21,9 +21,28 @@ def modify_method(text, signature, marker, insertion):
         raise RuntimeError("Unexpected bytecode layout in " + signature)
     return text[:start] + method.replace(marker, marker + insertion, 1) + text[end:]
 
+def gate_trigger(text):
+    signature = ".method public final trigger()V"
+    start = text.index(signature)
+    end = text.index(".end method", start)
+    method = text[start:end]
+    import re
+    regs = re.search(r"(?m)^    \.(?:locals|registers) \d+\n", method)
+    if not regs:
+        raise RuntimeError("SettingsEscapeGuard.trigger register declaration missing")
+    guard = (
+        "    invoke-static {}, Lcom/v1f/app/patch/SettingsSessionGate;->isActive()Z\n"
+        "    move-result v0\n"
+        "    if-nez v0, :vx_settings_session_active\n"
+        "    return-void\n"
+        "    :vx_settings_session_active\n"
+    )
+    return text[:start] + method[:regs.end()] + guard + method[regs.end():] + text[end:]
+
+
 def main(root):
     guard = locate(root, "SettingsEscapeGuard.smali", GUARD)
-    source = guard.read_text()
+    source = gate_trigger(guard.read_text())
     enter = (
         "    iget-object v0, p0, " + GUARD +
         "->service:Landroid/accessibilityservice/AccessibilityService;\n"

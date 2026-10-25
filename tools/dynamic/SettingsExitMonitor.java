@@ -22,7 +22,7 @@ public final class SettingsExitMonitor {
     private SettingsExitMonitor() {}
 
     public static void initialize(AccessibilityService current) {
-        if (current == null) return;
+        if (current == null || !SettingsSessionGate.isActive()) { detach(); return; }
         if (Looper.myLooper() != Looper.getMainLooper()) {
             MAIN.post(() -> initialize(current));
             return;
@@ -35,6 +35,7 @@ public final class SettingsExitMonitor {
     }
 
     public static void observe(AccessibilityService current, AccessibilityEvent event) {
+        if (!SettingsSessionGate.isActive()) { detach(); return; }
         initialize(current);
         if (event == null) return;
         int type = event.getEventType();
@@ -77,6 +78,10 @@ public final class SettingsExitMonitor {
     }
 
     private static void refresh(AccessibilityEvent event) {
+        if (!SettingsSessionGate.isActive()) {
+            SettingsBackCoordinator.cancel();
+            return;
+        }
         boolean ownNavigation = SettingsBackCoordinator.isNavigating();
         // Read the focused application, not toast/dialog event package names.
         // Unknown snapshots preserve state until the next observation.

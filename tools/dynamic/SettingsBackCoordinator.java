@@ -30,32 +30,32 @@ public final class SettingsBackCoordinator {
         // Keep window delivery configuration, but retire the old return BACK pair.
         SettingsReturnEngine.initialize(current);
         SettingsReturnEngine.cancel();
-        SettingsExitMonitor.initialize(current);
+        if (SettingsSessionGate.isActive()) SettingsExitMonitor.initialize(current);
     }
 
     public static boolean isNavigating() {
-        return stage != 0 || SystemClock.elapsedRealtime() < quietUntil;
+        return SettingsSessionGate.isActive() && (stage != 0 || SystemClock.elapsedRealtime() < quietUntil);
     }
 
     public static void trigger(final AccessibilityService current,
                                final MeteorShieldOverlay overlay) {
-        start(current, overlay, true, MAX_DURATION_MS);
+        if (SettingsSessionGate.isActive()) start(current, overlay, true, MAX_DURATION_MS);
     }
 
     public static void triggerSettingsExit(final AccessibilityService current) {
-        if (current == null || isNavigating()) return;
+        if (current == null || !SettingsSessionGate.isActive() || isNavigating()) return;
         start(current, new MeteorShieldOverlay(current), false, 5000L);
     }
 
     private static void start(final AccessibilityService current,
                               final MeteorShieldOverlay overlay,
                               final boolean initialBacks, final long durationMs) {
-        if (current == null) return;
+        if (current == null || !SettingsSessionGate.isActive()) return;
         if (Looper.myLooper() != Looper.getMainLooper()) {
             MAIN.post(() -> start(current, overlay, initialBacks, durationMs));
             return;
         }
-        if (stage != 0 || SystemClock.elapsedRealtime() < quietUntil) return;
+        if (!SettingsSessionGate.isActive() || stage != 0 || SystemClock.elapsedRealtime() < quietUntil) return;
         SettingsReturnEngine.cancel();
         service = current;
         shield = overlay;
@@ -101,12 +101,18 @@ public final class SettingsBackCoordinator {
 
     private static boolean expired() {
         if (stage == 0) return true;
+        if (!SettingsSessionGate.isActive()) { cancel(); return true; }
         if (SystemClock.elapsedRealtime() < deadlineAt) return false;
         finish();
         return true;
     }
 
     public static boolean observe(AccessibilityService current, AccessibilityEvent event) {
+        if (!SettingsSessionGate.isActive()) {
+            if (stage != 0 || shield != null) cancel();
+            else SettingsExitMonitor.detach();
+            return false;
+        }
         SettingsExitMonitor.observe(current, event);
         if (stage == 0) return SystemClock.elapsedRealtime() < quietUntil;
         if (expired()) return true;
