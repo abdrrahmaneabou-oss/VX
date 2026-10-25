@@ -71,6 +71,23 @@ public final class SettingsBackCoordinator {
         MAIN.postDelayed(hideTask, SHIELD_DURATION_MS);
     }
 
+    /** Used only for OS service teardown: do NOT discard the return request. */
+    public static void detach() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            MAIN.post(SettingsBackCoordinator::detach);
+            return;
+        }
+        SettingsReturnEngine.detach();
+        generation++;
+        if (hideTask != null) MAIN.removeCallbacks(hideTask);
+        hideTask = null;
+        if (shield != null) {
+            try { shield.hide(); } catch (RuntimeException ignored) {}
+        }
+        shield = null;
+        lastTriggerMs = 0L;
+    }
+
     public static void cancel() {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             MAIN.post(SettingsBackCoordinator::cancel);
