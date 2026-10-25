@@ -58,12 +58,12 @@ def main(root):
     init_hook = (
         "    invoke-static {p0}, "
         "Lcom/v1f/app/patch/SettingsReturnEngine;"
-        "->initialize(Landroid/accessibilityservice/AccessibilityService;)V\\n"
+        "->initialize(Landroid/accessibilityservice/AccessibilityService;)V\n"
     )
     source = modify_method(
         source,
         ".method protected onServiceConnected()V",
-        "    invoke-super {p0}, Landroid/accessibilityservice/AccessibilityService;->onServiceConnected()V\\n",
+        "    invoke-super {p0}, Landroid/accessibilityservice/AccessibilityService;->onServiceConnected()V\n",
         init_hook
     )
     service.write_text(source)
