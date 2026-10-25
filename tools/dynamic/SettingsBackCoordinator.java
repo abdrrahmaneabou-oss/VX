@@ -30,6 +30,7 @@ public final class SettingsBackCoordinator {
         // Keep window delivery configuration, but retire the old return BACK pair.
         SettingsReturnEngine.initialize(current);
         SettingsReturnEngine.cancel();
+        SettingsBottomStrip.initialize(current);
     }
 
     public static void trigger(final AccessibilityService current,
@@ -88,6 +89,7 @@ public final class SettingsBackCoordinator {
     }
 
     public static boolean observe(AccessibilityService current, AccessibilityEvent event) {
+        SettingsBottomStrip.observe(current, event);
         if (stage == 0) return SystemClock.elapsedRealtime() < quietUntil;
         if (expired()) return true;
         // Consume navigation events without using them to start the final BACKs.
@@ -162,6 +164,7 @@ public final class SettingsBackCoordinator {
             return;
         }
         SettingsReturnEngine.cancel();
+        SettingsBottomStrip.detach();
         finish();
     }
 }
