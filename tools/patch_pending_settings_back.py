@@ -38,7 +38,7 @@ def main(root):
                            "    :cond_0\n", enter)
     source = modify_method(source, ".method public final close()V",
                            "    .locals 2\n",
-                           "    invoke-static {}, " + COORD + "->cancel()V\n")
+                           "    invoke-static {}, " + COORD + "->detach()V\n")
     guard.write_text(source)
 
     service = locate(root, "AppBlockAccessibilityService.smali", SERVICE)
@@ -52,6 +52,13 @@ def main(root):
         source,
         ".method public onAccessibilityEvent(Landroid/view/accessibility/AccessibilityEvent;)V",
         "    :cond_0\n", observe
+    )
+    # Explicitly PAUSING V2F cancels pending requests; service destruction
+    # merely detaches so Android can restore them when Accessibility returns.
+    pause_hook = "    invoke-static {}, " + COORD + "->cancel()V\n"
+    source = modify_method(
+        source, ".method public final patchPause()V",
+        "    .locals 2\n", pause_hook
     )
     # Enable window-state delivery and recover a pending return transaction
     # after Android recreates the accessibility service.
