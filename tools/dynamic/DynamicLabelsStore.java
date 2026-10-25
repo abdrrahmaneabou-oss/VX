@@ -15,6 +15,8 @@ public final class DynamicLabelsStore {
     private static final String[] DEFAULTS = new String[] {
             "System Languages",
             "Developer options",
+            "Security & privacy",
+            "More security & privacy",
             "Device admin",
             "DEACTIVATE THIS DEVICE ADMIN APP",
             "Uninstall",
