@@ -106,40 +106,32 @@ public final class SettingsReturnEngine {
         schedulePoll();
     }
 
-    public static void observe(final AccessibilityService current,
-                               final AccessibilityEvent event) {
+    /** True when this event already delivered the one-time return BACK pair. */
+    public static boolean observe(final AccessibilityService current,
+                                  final AccessibilityEvent event) {
         if (current == null || event == null || MACHINE.getState() == SettingsReturnState.IDLE)
-            return;
+            return false;
         if (Looper.myLooper() != Looper.getMainLooper()) {
             MAIN.post(() -> observe(current, event));
-            return;
+            return false;
         }
         service = current;
         final int kind = event.getEventType();
 
-        // A WINDOW_STATE_CHANGED event describes the NEW window. It must take
-        // precedence over getRootInActiveWindow(), which can still be stale.
-        // Never inspect the old root again in the same callback.
+        // A fresh window event is more reliable than an old cached root.
         if (kind == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             String pkg = eventPackage(event);
             if (pkg != null && !pkg.startsWith(SELF)) {
-                transition(pkg);
-                return;
+                return transition(pkg);
             }
         }
-
-        // TYPE_WINDOWS_CHANGED can describe the window LOSING focus.
-        // Its event package is not necessarily the new foreground package.
-        // Inspect focused windows instead of trusting that package.
-
-        // Content-change events are never foreground evidence by themselves.
-        // They can wake a fresh focused-window inspection, but cannot use their
-        // own package field to claim Settings is foreground.
+        // Windows-changed events may describe a window losing focus; inspect.
         if (kind == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
                 || kind == AccessibilityEvent.TYPE_WINDOWS_CHANGED
                 || kind == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            examineFocusedWindow();
+            return examineFocusedWindow();
         }
+        return false;
     }
 
     private static String eventPackage(AccessibilityEvent event) {
@@ -147,7 +139,7 @@ public final class SettingsReturnEngine {
         return pkg == null ? null : pkg.toString();
     }
 
-    private static void transition(String packageName) {
+    private static boolean transition(String packageName) {
         int before = MACHINE.getState();
         boolean returned = MACHINE.accept(packageName);
         int after = MACHINE.getState();
@@ -170,10 +162,11 @@ public final class SettingsReturnEngine {
                 safeBack(current);
             }
         }
+        return returned;
     }
 
-    private static void examineFocusedWindow() {
-        if (MACHINE.getState() == SettingsReturnState.IDLE || service == null) return;
+    private static boolean examineFocusedWindow() {
+        if (MACHINE.getState() == SettingsReturnState.IDLE || service == null) return false;
         String pkg = null;
         boolean strongWindow = false;
         try {
@@ -186,7 +179,7 @@ public final class SettingsReturnEngine {
                     if (root == null || root.getPackageName() == null) continue;
                     String found = root.getPackageName().toString();
                     // The block shield isn't evidence of Settings leaving.
-                    if (found.startsWith(SELF)) return;
+                    if (found.startsWith(SELF)) return false;
                     pkg = found;
                     strongWindow = true;
                     break;
@@ -203,7 +196,7 @@ public final class SettingsReturnEngine {
                 }
             } catch (RuntimeException ignored) {}
         }
-        if (pkg == null) return;
+        if (pkg == null) return false;
 
         // If only the root is available, demand two stable observations.
         // A single stale root immediately after HOME must not consume BACKs.
@@ -211,15 +204,15 @@ public final class SettingsReturnEngine {
             if (!pkg.equals(lastPolledPackage)) {
                 lastPolledPackage = pkg;
                 matchingPolls = 1;
-                return;
+                return false;
             }
-            if (++matchingPolls < 2) return;
+            if (++matchingPolls < 2) return false;
             if (MACHINE.getState() == SettingsReturnState.WAITING_FOR_RETURN
                     && lastExitAt > 0
                     && SystemClock.elapsedRealtime() - lastExitAt < FALLBACK_CONFIRM_MS)
-                return;
+                return false;
         }
-        transition(pkg);
+        return transition(pkg);
     }
 
     private static void safeBack(AccessibilityService current) {
