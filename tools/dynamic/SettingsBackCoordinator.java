@@ -30,14 +30,29 @@ public final class SettingsBackCoordinator {
         // Keep window delivery configuration, but retire the old return BACK pair.
         SettingsReturnEngine.initialize(current);
         SettingsReturnEngine.cancel();
-        SettingsBottomStrip.initialize(current);
+        SettingsExitMonitor.initialize(current);
+    }
+
+    public static boolean isNavigating() {
+        return stage != 0 || SystemClock.elapsedRealtime() < quietUntil;
     }
 
     public static void trigger(final AccessibilityService current,
                                final MeteorShieldOverlay overlay) {
+        start(current, overlay, true, MAX_DURATION_MS);
+    }
+
+    public static void triggerSettingsExit(final AccessibilityService current) {
+        if (current == null || isNavigating()) return;
+        start(current, new MeteorShieldOverlay(current), false, 5000L);
+    }
+
+    private static void start(final AccessibilityService current,
+                              final MeteorShieldOverlay overlay,
+                              final boolean initialBacks, final long durationMs) {
         if (current == null) return;
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            MAIN.post(() -> trigger(current, overlay));
+            MAIN.post(() -> start(current, overlay, initialBacks, durationMs));
             return;
         }
         if (stage != 0 || SystemClock.elapsedRealtime() < quietUntil) return;
@@ -45,8 +60,8 @@ public final class SettingsBackCoordinator {
         service = current;
         shield = overlay;
         generation++;
-        stage = 3;
-        deadlineAt = SystemClock.elapsedRealtime() + MAX_DURATION_MS;
+        stage = initialBacks ? 3 : 1;
+        deadlineAt = SystemClock.elapsedRealtime() + durationMs;
         try {
             if (shield == null || !shield.show()) {
                 fail("Could not show protection shield");
@@ -61,9 +76,12 @@ public final class SettingsBackCoordinator {
         deadlineTask = () -> {
             if (token == generation && stage != 0) finish();
         };
-        MAIN.postDelayed(deadlineTask, MAX_DURATION_MS);
+        MAIN.postDelayed(deadlineTask, durationMs);
         // Let the attached shield receive a frame before issuing initial BACKs.
-        schedule(() -> sendBack(1), 32L);
+        schedule(() -> {
+            if (initialBacks) sendBack(1);
+            else openSettings();
+        }, 32L);
     }
 
     private static void openSettings() {
@@ -89,7 +107,7 @@ public final class SettingsBackCoordinator {
     }
 
     public static boolean observe(AccessibilityService current, AccessibilityEvent event) {
-        SettingsBottomStrip.observe(current, event);
+        SettingsExitMonitor.observe(current, event);
         if (stage == 0) return SystemClock.elapsedRealtime() < quietUntil;
         if (expired()) return true;
         // Consume navigation events without using them to start the final BACKs.
@@ -164,7 +182,7 @@ public final class SettingsBackCoordinator {
             return;
         }
         SettingsReturnEngine.cancel();
-        SettingsBottomStrip.detach();
+        SettingsExitMonitor.detach();
         finish();
     }
 }
