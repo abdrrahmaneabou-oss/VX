@@ -58,17 +58,16 @@ def main(root):
         "    :cond_0\n", observe
     )
     # Explicitly PAUSING V2F cancels pending requests; service destruction
-    # merely detaches so Android can restore them when Accessibility returns.
+    # cancels callbacks and removes the attached shield.
     pause_hook = "    invoke-static {}, " + COORD + "->cancel()V\n"
     source = modify_method(
         source, ".method public final patchPause()V",
         "    .locals 2\n", pause_hook
     )
-    # Enable window-state delivery and recover a pending return transaction
-    # after Android recreates the accessibility service.
+    # Enable window-state delivery and retire pending legacy return actions.
     init_hook = (
         "    invoke-static {p0}, "
-        "Lcom/v1f/app/patch/SettingsReturnEngine;"
+        "Lcom/v1f/app/patch/SettingsBackCoordinator;"
         "->initialize(Landroid/accessibilityservice/AccessibilityService;)V\n"
     )
     source = modify_method(

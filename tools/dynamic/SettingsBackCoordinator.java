@@ -1,92 +1,172 @@
 package com.v1f.app.patch;
 
 import android.accessibilityservice.AccessibilityService;
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
+import android.widget.Toast;
 import com.v1f.app.protection.overlay.MeteorShieldOverlay;
 
-/**
- * Step 1: issue two BACK actions immediately on a blocked Settings click.
- * Do not check the foreground package, window, or page before either action.
- * Future stages of the escape policy will be added separately.
- */
+/** A single shield -> Settings foreground -> BACK -> 300ms -> BACK transaction. */
 public final class SettingsBackCoordinator {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    private static final long SHIELD_DURATION_MS = 5000L;
-    private static final long DUPLICATE_EVENT_WINDOW_MS = 120L;
-    private static long lastTriggerMs;
+    private static final String SETTINGS = "com.android.settings";
+    private static AccessibilityService service;
     private static MeteorShieldOverlay shield;
-    private static Runnable hideTask;
+    private static Runnable pending;
     private static int generation;
+    private static int stage; // 0 idle, 1 waiting for Settings, 2 BACK sequence
+    private static long launchedAt;
+    private static long quietUntil;
+    private static int focusedSamples;
 
     private SettingsBackCoordinator() {}
 
-    public static void trigger(final AccessibilityService service,
+    public static void initialize(AccessibilityService current) {
+        // Keep window delivery configuration, but retire the old return BACK pair.
+        SettingsReturnEngine.initialize(current);
+        SettingsReturnEngine.cancel();
+    }
+
+    public static void trigger(final AccessibilityService current,
                                final MeteorShieldOverlay overlay) {
-        if (service == null) return;
+        if (current == null) return;
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            MAIN.post(() -> trigger(service, overlay));
+            MAIN.post(() -> trigger(current, overlay));
             return;
         }
-        long now = SystemClock.elapsedRealtime();
-        if (lastTriggerMs != 0L && now - lastTriggerMs < DUPLICATE_EVENT_WINDOW_MS) {
-            return;
-        }
-        lastTriggerMs = now;
-
-        // Two consecutive BACK requests. No foreground checks or delay.
-        // Do not let an OS rejection of the first action prevent the second
-        // action or the return monitor from starting. No checks or delays.
-        try { service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); }
-        catch (RuntimeException ignored) {}
-        try { service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); }
-        catch (RuntimeException ignored) {}
-
-        // Arm the independent return observer only AFTER initial BACK x2.
-        SettingsReturnEngine.arm(service);
-
-        // Show the existing block overlay only after both BACK requests.
+        if (stage != 0 || SystemClock.elapsedRealtime() < quietUntil) return;
+        SettingsReturnEngine.cancel();
+        service = current;
         shield = overlay;
-        showShield();
-    }
-
-    // Retained for compatibility with the service hook; later steps will use it.
-    public static boolean observe(AccessibilityService service, AccessibilityEvent event) {
-        return SettingsReturnEngine.observe(service, event);
-    }
-
-    private static void showShield() {
-        if (shield == null) return;
-        try { shield.show(); } catch (RuntimeException ignored) {}
-        if (hideTask != null) MAIN.removeCallbacks(hideTask);
-        final int token = ++generation;
-        hideTask = () -> {
-            if (generation != token) return;
-            try { if (shield != null) shield.hide(); }
-            catch (RuntimeException ignored) {}
-            hideTask = null;
-        };
-        MAIN.postDelayed(hideTask, SHIELD_DURATION_MS);
-    }
-
-    /** Used only for OS service teardown: do NOT discard the return request. */
-    public static void detach() {
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            MAIN.post(SettingsBackCoordinator::detach);
+        generation++;
+        stage = 1;
+        focusedSamples = 0;
+        try {
+            if (shield == null || !shield.show()) {
+                fail("Could not show protection shield");
+                return;
+            }
+        } catch (RuntimeException error) {
+            fail("Could not show protection shield");
             return;
         }
-        SettingsReturnEngine.detach();
+        // Post launch so the shield gets a chance to attach first.
+        schedule(() -> {
+            launchedAt = SystemClock.uptimeMillis();
+            try {
+                Intent intent = current.getPackageManager().getLaunchIntentForPackage(SETTINGS);
+                if (intent == null) intent = new Intent(Settings.ACTION_SETTINGS).setPackage(SETTINGS);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                current.startActivity(intent);
+                pollForeground();
+            } catch (RuntimeException error) {
+                fail("Could not open Settings");
+            }
+        }, 0L);
+    }
+
+    public static boolean observe(AccessibilityService current, AccessibilityEvent event) {
+        if (stage == 0) return SystemClock.elapsedRealtime() < quietUntil;
+        // Consume events during our own navigation to prevent recursive blocking.
+        if (stage == 1 && launchedAt != 0L && event != null
+                && event.getEventTime() >= launchedAt
+                && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                && SETTINGS.contentEquals(event.getPackageName() == null ? "" : event.getPackageName())) {
+            beginBacks();
+        }
+        return true;
+    }
+
+    private static boolean settingsFocused() {
+        try {
+            for (AccessibilityWindowInfo window : service.getWindows()) {
+                if (window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION
+                        || !window.isFocused()) continue;
+                AccessibilityNodeInfo root = window.getRoot();
+                if (root != null) {
+                    try { return SETTINGS.contentEquals(root.getPackageName() == null ? "" : root.getPackageName()); }
+                    finally { root.recycle(); }
+                }
+            }
+        } catch (RuntimeException ignored) {}
+        return false;
+    }
+
+    private static void pollForeground() {
+        if (stage != 1) return;
+        // Handles an already foreground Settings task without trusting a stale root.
+        if (SystemClock.uptimeMillis() - launchedAt >= 300L && settingsFocused()) {
+            if (++focusedSamples >= 2) {
+                beginBacks();
+                return;
+            }
+        } else focusedSamples = 0;
+        // No five-second cutoff: the shield stays until the operation finishes.
+        schedule(SettingsBackCoordinator::pollForeground, 100L);
+    }
+
+    private static void beginBacks() {
+        if (stage != 1) return;
+        stage = 2;
+        removePending();
+        sendBack(1);
+    }
+
+    private static void sendBack(final int number) {
+        if (stage != 2 || service == null) return;
+        boolean accepted = false;
+        try { accepted = service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); }
+        catch (RuntimeException ignored) {}
+        if (!accepted) {
+            schedule(() -> sendBack(number), 150L);
+        } else if (number == 1) {
+            schedule(() -> sendBack(2), 300L);
+        } else {
+            finish();
+        }
+    }
+
+    private static void schedule(Runnable action, long delay) {
+        removePending();
+        final int token = generation;
+        pending = () -> {
+            if (token != generation) return;
+            pending = null;
+            action.run();
+        };
+        MAIN.postDelayed(pending, delay);
+    }
+
+    private static void removePending() {
+        if (pending != null) MAIN.removeCallbacks(pending);
+        pending = null;
+    }
+
+    private static void finish() {
         generation++;
-        if (hideTask != null) MAIN.removeCallbacks(hideTask);
-        hideTask = null;
+        removePending();
+        stage = 0;
+        launchedAt = 0L;
+        quietUntil = SystemClock.elapsedRealtime() + 700L;
         if (shield != null) {
             try { shield.hide(); } catch (RuntimeException ignored) {}
         }
         shield = null;
-        lastTriggerMs = 0L;
+        service = null;
     }
+
+    private static void fail(String message) {
+        if (service != null) Toast.makeText(service, message, Toast.LENGTH_SHORT).show();
+        finish();
+    }
+
+    public static void detach() { cancel(); }
 
     public static void cancel() {
         if (Looper.myLooper() != Looper.getMainLooper()) {
@@ -94,13 +174,6 @@ public final class SettingsBackCoordinator {
             return;
         }
         SettingsReturnEngine.cancel();
-        generation++;
-        if (hideTask != null) MAIN.removeCallbacks(hideTask);
-        hideTask = null;
-        if (shield != null) {
-            try { shield.hide(); } catch (RuntimeException ignored) {}
-        }
-        shield = null;
-        lastTriggerMs = 0L;
+        finish();
     }
 }
