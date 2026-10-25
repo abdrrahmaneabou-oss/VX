@@ -37,6 +37,10 @@ public final class RobustSettingsGuard {
         if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
                 || type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
                 || type == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                String openedPage = detectKnownProtectedPage(event, blocked);
+                if (openedPage != null) return openedPage;
+            }
             return detectDialog(event, blocked);
         }
 
@@ -53,17 +57,45 @@ public final class RobustSettingsGuard {
         String direct = firstBlocked(texts, blocked);
         if (direct != null) return direct;
 
-        // On Nubia and other OEM Settings screens the click source can be a
-        // chevron or another child with its own contentDescription. Therefore
-        // do not require the source to be textless before checking its row.
-        // Only inspect the immediate parent to avoid matching unrelated rows.
+        // REDMAGIC sometimes reports the icon or a nested child of the row.
+        // Follow up to four parent levels but stop at the FIRST clickable row,
+        // never scanning an entire Settings list for unrelated blocked labels.
         AccessibilityNodeInfo parent = safeParent(source);
-        if (parent != null) {
-            collectNode(parent, texts, 2, new int[] { 24 });
-            String fromRow = firstBlocked(texts, blocked);
-            if (fromRow != null) return fromRow;
+        for (int level = 0; parent != null && level < 4; level++) {
+            try { add(texts, parent.getText()); } catch (RuntimeException ignored) {}
+            try { add(texts, parent.getContentDescription()); } catch (RuntimeException ignored) {}
+            String fromParent = firstBlocked(texts, blocked);
+            if (fromParent != null) return fromParent;
+            boolean isRow = false;
+            try { isRow = parent.isClickable(); } catch (RuntimeException ignored) {}
+            if (isRow) {
+                collectNode(parent, texts, 3, new int[] { 48 });
+                return firstBlocked(texts, blocked);
+            }
+            parent = safeParent(parent);
         }
 
+        return null;
+    }
+
+    /**
+     * A second opportunity when a click was missed: the actual Settings page
+     * became active. Match a known Activity identity, NOT text from the home
+     * menu (which contains labels for pages not currently open).
+     */
+    private static String detectKnownProtectedPage(AccessibilityEvent event,
+                                                    Set<String> blocked) {
+        CharSequence className = event.getClassName();
+        if (className == null) return null;
+        String activity = className.toString();
+        if (activity.endsWith("Settings$SecurityDashboardActivity")
+                && containsNormalized(blocked, "Security & privacy")) {
+            return "Security & privacy";
+        }
+        if (activity.endsWith("Settings$MoreSecurityPrivacySettingsActivity")
+                && containsNormalized(blocked, "More security & privacy")) {
+            return "More security & privacy";
+        }
         return null;
     }
 
