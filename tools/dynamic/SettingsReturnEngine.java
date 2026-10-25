@@ -68,18 +68,20 @@ public final class SettingsReturnEngine {
         if (MACHINE.getState() == SettingsReturnState.IDLE) {
             int persisted = current.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
                     .getInt(PREF_STATE, SettingsReturnState.IDLE);
-            // Android may have killed Accessibility before it could observe
-            // HOME. If a transaction survived service recreation, treat its
-            // next Settings foreground as a return (extra BACKs are preferable
-            // to leaving a previously blocked page open).
+            // If the process was killed during the departure transition,
+            // conservatively preserve the next Settings return action.
             MACHINE.restore(persisted == SettingsReturnState.IDLE
                     ? SettingsReturnState.IDLE
                     : SettingsReturnState.WAITING_FOR_RETURN);
-            if (MACHINE.getState() != SettingsReturnState.IDLE) {
-                armedAt = SystemClock.elapsedRealtime();
-                lastExitAt = armedAt - FALLBACK_CONFIRM_MS;
-                schedulePoll();
-            }
+        }
+        if (MACHINE.getState() != SettingsReturnState.IDLE) {
+            // Also covers service rebinds in the same live process.
+            if (MACHINE.getState() == SettingsReturnState.WAITING_FOR_EXIT)
+                MACHINE.restore(SettingsReturnState.WAITING_FOR_RETURN);
+            armedAt = SystemClock.elapsedRealtime();
+            lastExitAt = armedAt - FALLBACK_CONFIRM_MS;
+            persist();
+            schedulePoll();
         }
     }
 
@@ -253,6 +255,20 @@ public final class SettingsReturnEngine {
     private static void removePoll() {
         if (pollTask != null) MAIN.removeCallbacks(pollTask);
         pollTask = null;
+    }
+
+    /** Service disconnect: free live references but KEEP pending work on disk. */
+    public static void detach() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            MAIN.post(SettingsReturnEngine::detach);
+            return;
+        }
+        generation++;
+        removePoll();
+        service = null;
+        lastPolledPackage = null;
+        matchingPolls = 0;
+        // Neither MACHINE nor PREF_STATE is cleared: the transaction survives.
     }
 
     public static void cancel() {
