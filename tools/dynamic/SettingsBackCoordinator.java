@@ -40,6 +40,9 @@ public final class SettingsBackCoordinator {
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
 
+        // Arm the independent return observer only AFTER initial BACK x2.
+        SettingsReturnEngine.arm(service);
+
         // Show the existing block overlay only after both BACK requests.
         shield = overlay;
         showShield();
@@ -47,6 +50,7 @@ public final class SettingsBackCoordinator {
 
     // Retained for compatibility with the service hook; later steps will use it.
     public static void observe(AccessibilityService service, AccessibilityEvent event) {
+        SettingsReturnEngine.observe(service, event);
     }
 
     private static void showShield() {
@@ -68,6 +72,7 @@ public final class SettingsBackCoordinator {
             MAIN.post(SettingsBackCoordinator::cancel);
             return;
         }
+        SettingsReturnEngine.cancel();
         generation++;
         if (hideTask != null) MAIN.removeCallbacks(hideTask);
         hideTask = null;
