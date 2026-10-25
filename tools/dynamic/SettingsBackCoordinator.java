@@ -7,12 +7,10 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.view.accessibility.AccessibilityEvent;
-import android.view.accessibility.AccessibilityNodeInfo;
-import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.Toast;
 import com.v1f.app.protection.overlay.MeteorShieldOverlay;
 
-/** Shield -> three BACKs -> Settings foreground -> three BACKs -> hide. */
+/** Shield -> three BACKs -> launch Settings -> wait 500ms -> three BACKs -> hide. */
 public final class SettingsBackCoordinator {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final String SETTINGS = "com.android.settings";
@@ -23,10 +21,8 @@ public final class SettingsBackCoordinator {
     private static long deadlineAt;
     private static final long MAX_DURATION_MS = 7500L;
     private static int generation;
-    private static int stage; // 0 idle, 1 waiting for Settings, 2 final BACKs, 3 initial BACKs
-    private static long launchedAt;
+    private static int stage; // 0 idle, 1 waiting 500ms after launch, 2 final BACKs, 3 initial BACKs
     private static long quietUntil;
-    private static int focusedSamples;
 
     private SettingsBackCoordinator() {}
 
@@ -49,8 +45,6 @@ public final class SettingsBackCoordinator {
         shield = overlay;
         generation++;
         stage = 3;
-        focusedSamples = 0;
-        launchedAt = 0L;
         deadlineAt = SystemClock.elapsedRealtime() + MAX_DURATION_MS;
         try {
             if (shield == null || !shield.show()) {
@@ -61,7 +55,7 @@ public final class SettingsBackCoordinator {
             fail("Could not show protection shield");
             return;
         }
-        // Independent watchdog: never reset by launch, polling or BACK retries.
+        // Independent watchdog: never reset by launch or BACK retries.
         final int token = generation;
         deadlineTask = () -> {
             if (token == generation && stage != 0) finish();
@@ -74,14 +68,13 @@ public final class SettingsBackCoordinator {
     private static void openSettings() {
         if (expired() || service == null) return;
         stage = 1;
-        focusedSamples = 0;
-        launchedAt = SystemClock.uptimeMillis();
         try {
             Intent intent = service.getPackageManager().getLaunchIntentForPackage(SETTINGS);
             if (intent == null) intent = new Intent(Settings.ACTION_SETTINGS).setPackage(SETTINGS);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             service.startActivity(intent);
-            pollForeground();
+            // Fixed delay; window events cannot shorten or extend it.
+            schedule(SettingsBackCoordinator::beginBacks, 500L);
         } catch (RuntimeException error) {
             fail("Could not open Settings");
         }
@@ -97,42 +90,8 @@ public final class SettingsBackCoordinator {
     public static boolean observe(AccessibilityService current, AccessibilityEvent event) {
         if (stage == 0) return SystemClock.elapsedRealtime() < quietUntil;
         if (expired()) return true;
-        // Consume events during our own navigation to prevent recursive blocking.
-        if (stage == 1 && launchedAt != 0L && event != null
-                && event.getEventTime() >= launchedAt
-                && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-                && SETTINGS.contentEquals(event.getPackageName() == null ? "" : event.getPackageName())) {
-            beginBacks();
-        }
+        // Consume navigation events without using them to start the final BACKs.
         return true;
-    }
-
-    private static boolean settingsFocused() {
-        try {
-            for (AccessibilityWindowInfo window : service.getWindows()) {
-                if (window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION
-                        || !window.isFocused()) continue;
-                AccessibilityNodeInfo root = window.getRoot();
-                if (root != null) {
-                    try { return SETTINGS.contentEquals(root.getPackageName() == null ? "" : root.getPackageName()); }
-                    finally { root.recycle(); }
-                }
-            }
-        } catch (RuntimeException ignored) {}
-        return false;
-    }
-
-    private static void pollForeground() {
-        if (stage != 1) return;
-        // Handles an already foreground Settings task without trusting a stale root.
-        if (SystemClock.uptimeMillis() - launchedAt >= 300L && settingsFocused()) {
-            if (++focusedSamples >= 2) {
-                beginBacks();
-                return;
-            }
-        } else focusedSamples = 0;
-        // At five seconds keep waiting; the independent watchdog ends at 7.5 seconds.
-        schedule(SettingsBackCoordinator::pollForeground, 100L);
     }
 
     private static void beginBacks() {
@@ -182,7 +141,6 @@ public final class SettingsBackCoordinator {
         deadlineTask = null;
         deadlineAt = 0L;
         stage = 0;
-        launchedAt = 0L;
         quietUntil = SystemClock.elapsedRealtime() + 700L;
         if (shield != null) {
             try { shield.hide(); } catch (RuntimeException ignored) {}
