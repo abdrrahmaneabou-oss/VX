@@ -68,7 +68,13 @@ public final class SettingsReturnEngine {
         if (MACHINE.getState() == SettingsReturnState.IDLE) {
             int persisted = current.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
                     .getInt(PREF_STATE, SettingsReturnState.IDLE);
-            MACHINE.restore(persisted);
+            // Android may have killed Accessibility before it could observe
+            // HOME. If a transaction survived service recreation, treat its
+            // next Settings foreground as a return (extra BACKs are preferable
+            // to leaving a previously blocked page open).
+            MACHINE.restore(persisted == SettingsReturnState.IDLE
+                    ? SettingsReturnState.IDLE
+                    : SettingsReturnState.WAITING_FOR_RETURN);
             if (MACHINE.getState() != SettingsReturnState.IDLE) {
                 armedAt = SystemClock.elapsedRealtime();
                 lastExitAt = armedAt - FALLBACK_CONFIRM_MS;
