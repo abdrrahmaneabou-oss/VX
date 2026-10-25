@@ -53,8 +53,8 @@ public final class SettingsBackCoordinator {
     }
 
     // Retained for compatibility with the service hook; later steps will use it.
-    public static void observe(AccessibilityService service, AccessibilityEvent event) {
-        SettingsReturnEngine.observe(service, event);
+    public static boolean observe(AccessibilityService service, AccessibilityEvent event) {
+        return SettingsReturnEngine.observe(service, event);
     }
 
     private static void showShield() {
