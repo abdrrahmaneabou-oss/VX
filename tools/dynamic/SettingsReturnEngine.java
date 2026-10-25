@@ -120,18 +120,9 @@ public final class SettingsReturnEngine {
             }
         }
 
-        if (kind == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
-            int changes = event.getWindowChanges();
-            int focusChanges = AccessibilityEvent.WINDOWS_CHANGE_ACTIVE
-                    | AccessibilityEvent.WINDOWS_CHANGE_FOCUSED;
-            if ((changes & focusChanges) != 0) {
-                String pkg = eventPackage(event);
-                if (pkg != null && !pkg.startsWith(SELF)) {
-                    transition(pkg);
-                    return;
-                }
-            }
-        }
+        // TYPE_WINDOWS_CHANGED can describe the window LOSING focus.
+        // Its event package is not necessarily the new foreground package.
+        // Inspect focused windows instead of trusting that package.
 
         // Content-change events are never foreground evidence by themselves.
         // They can wake a fresh focused-window inspection, but cannot use their
@@ -182,7 +173,7 @@ public final class SettingsReturnEngine {
             if (windows != null) {
                 for (AccessibilityWindowInfo w : windows) {
                     if (w == null || w.getType() != AccessibilityWindowInfo.TYPE_APPLICATION
-                            || (!w.isFocused() && !w.isActive())) continue;
+                            || !w.isFocused()) continue;
                     AccessibilityNodeInfo root = w.getRoot();
                     if (root == null || root.getPackageName() == null) continue;
                     String found = root.getPackageName().toString();
