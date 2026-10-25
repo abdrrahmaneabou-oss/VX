@@ -6,6 +6,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
@@ -77,6 +78,11 @@ public final class SettingsExitMonitor {
         return null;
     }
 
+    /** Immediately mark the next transition as app-owned, even before events arrive. */
+    public static void markOwnNavigation() {
+        STATE.observe(true, null, SystemClock.elapsedRealtime());
+    }
+
     private static void refresh(AccessibilityEvent event) {
         if (!SettingsSessionGate.isActive()) {
             SettingsBackCoordinator.cancel();
@@ -86,7 +92,7 @@ public final class SettingsExitMonitor {
         // Read the focused application, not toast/dialog event package names.
         // Unknown snapshots preserve state until the next observation.
         String pkg = ownNavigation ? null : foregroundPackage();
-        if (STATE.observe(ownNavigation, pkg)) {
+        if (STATE.observe(ownNavigation, pkg, SystemClock.elapsedRealtime())) {
             SettingsBackCoordinator.triggerSettingsExit(service);
         }
     }
