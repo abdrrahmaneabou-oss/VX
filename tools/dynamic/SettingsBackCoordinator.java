@@ -14,7 +14,7 @@ import com.v1f.app.protection.overlay.MeteorShieldOverlay;
  */
 public final class SettingsBackCoordinator {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    private static final long SHIELD_DURATION_MS = 782L;
+    private static final long SHIELD_DURATION_MS = 5000L;
     private static final long DUPLICATE_EVENT_WINDOW_MS = 120L;
     private static long lastTriggerMs;
     private static MeteorShieldOverlay shield;

@@ -30,6 +30,7 @@ javac -source 8 -target 8 \
   tools/dynamic/HomeCardState.java \
   tools/dynamic/RobustSettingsGuard.java \
   tools/dynamic/stubs/com/v1f/app/protection/overlay/MeteorShieldOverlay.java \
+  tools/dynamic/SettingsShieldWindow.java \
   tools/dynamic/SettingsBackCoordinator.java \
   tools/dynamic/SettingsReturnState.java \
   tools/dynamic/SettingsReturnEngine.java
