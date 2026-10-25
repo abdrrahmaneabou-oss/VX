@@ -24,6 +24,7 @@ python3 tools/inspect_block_state.py "$ROOT"
 # Enhanced editor includes live unsaved-state feedback and reset confirmation.
 python3 tools/patch_dynamic_labels.py "$ROOT"
 python3 tools/patch_dynamic_guard.py "$ROOT"
+python3 tools/patch_pending_settings_back.py "$ROOT"
 python3 tools/patch_break_interval_dynamic.py "$ROOT"
 python3 tools/patch_three_second_lock.py "$ROOT"
 python3 tools/patch_full_block_countdown.py "$ROOT"
