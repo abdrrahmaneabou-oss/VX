@@ -16,6 +16,10 @@ mkdir -p build/break-pause-tests
 javac -d build/break-pause-tests tools/dynamic/BreakPauseRules.java tools/tests/BreakPauseRulesTest.java
 java -cp build/break-pause-tests BreakPauseRulesTest
 
+mkdir -p build/blocked-back-tests
+javac -d build/blocked-back-tests tools/dynamic/BlockedBackSequencePlan.java tools/tests/BlockedBackSequencePlanTest.java
+java -cp build/blocked-back-tests BlockedBackSequencePlanTest
+
 rm -rf build/dynamic-classes build/dynamic-dex
 mkdir -p build/dynamic-classes build/dynamic-dex
 
@@ -40,6 +44,8 @@ javac -source 8 -target 8 \
   tools/dynamic/SettingsSessionGate.java \
   tools/dynamic/BreakPauseRules.java \
   tools/dynamic/BreakPauseController.java \
+  tools/dynamic/BlockedBackSequencePlan.java \
+  tools/dynamic/BlockedBackCoordinator.java \
   tools/dynamic/stubs/com/v1f/app/protection/overlay/MeteorShieldOverlay.java \
   tools/dynamic/SettingsExitMonitor.java \
   tools/dynamic/SettingsExitState.java \

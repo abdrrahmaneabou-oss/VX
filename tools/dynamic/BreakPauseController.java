@@ -44,6 +44,7 @@ public final class BreakPauseController {
         wasBreak = true;
         // Cancel in-flight callbacks too, not only newly-arriving block events.
         SettingsBackCoordinator.cancel();
+        BlockedBackCoordinator.cancel();
         closeVisibleLock();
     }
 
@@ -141,6 +142,7 @@ public final class BreakPauseController {
             return;
         }
         generation++;
+        BlockedBackCoordinator.cancel();
         if (servicePoll != null) MAIN.removeCallbacks(servicePoll);
         servicePoll = null;
         service = null;
