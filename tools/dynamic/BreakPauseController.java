@@ -30,6 +30,13 @@ public final class BreakPauseController {
 
     /** Check this before the stock ProtectionEngine dispatches any block. */
     public static boolean suppressBlockEvent(AccessibilityService current) {
+        // Independently track Settings foreground without changing any
+        // Settings guard/escape/black-shield decision or adding a new poller.
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            SettingsBottomStrip.update(current);
+        } else {
+            MAIN.post(() -> SettingsBottomStrip.update(current));
+        }
         if (!isBreakActive()) return false;
         if (Looper.myLooper() == Looper.getMainLooper()) {
             onBreakStarted();
@@ -45,6 +52,7 @@ public final class BreakPauseController {
         // Cancel in-flight callbacks too, not only newly-arriving block events.
         SettingsBackCoordinator.cancel();
         BlockedBackCoordinator.cancel();
+        SettingsBottomStrip.detach();
         closeVisibleLock();
     }
 
@@ -62,6 +70,7 @@ public final class BreakPauseController {
         servicePoll = new Runnable() {
             @Override public void run() {
                 if (service != current || token != generation || servicePoll != this) return;
+                SettingsBottomStrip.update(current);
                 boolean inBreak = isBreakActive();
                 if (inBreak) {
                     onBreakStarted();
@@ -143,6 +152,7 @@ public final class BreakPauseController {
         }
         generation++;
         BlockedBackCoordinator.cancel();
+        SettingsBottomStrip.detach();
         if (servicePoll != null) MAIN.removeCallbacks(servicePoll);
         servicePoll = null;
         service = null;

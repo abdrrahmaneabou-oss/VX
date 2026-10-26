@@ -42,6 +42,7 @@ javac -source 8 -target 8 \
   tools/dynamic/HomeCardState.java \
   tools/dynamic/RobustSettingsGuard.java \
   tools/dynamic/SettingsSessionGate.java \
+  tools/dynamic/SettingsBottomStrip.java \
   tools/dynamic/BreakPauseRules.java \
   tools/dynamic/BreakPauseController.java \
   tools/dynamic/BlockedBackSequencePlan.java \
