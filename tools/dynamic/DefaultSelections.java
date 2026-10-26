@@ -15,6 +15,7 @@ import java.util.Set;
 public final class DefaultSelections {
     private static final String[] APPS = {
         "com.twitter.android",
+        "com.google.android.googlequicksearchbox",
         "com.reddit.frontpage",
         "moe.shizuku.privileged.api",
         "com.aether.shizukubridgeX",
@@ -25,7 +26,7 @@ public final class DefaultSelections {
         "com.vk.vkvideo",
         "com.virekainteractive.adbshell"
     };
-    private static final String[] SITES = {"x.com", "reddit.com"};
+    private static final String[] SITES = {"x.com", "reddit.com", "vk.com", "vkvideo.ru"};
     private static final String FLAG = "initialized_v1";
 
     private DefaultSelections() {}
@@ -53,6 +54,14 @@ public final class DefaultSelections {
                         } catch (PackageManager.NameNotFoundException ignored) {}
                     }
                     remembered.edit().putStringSet("selected_packages", selected).commit();
+                }
+                // The duration editor uses day/hour/minute values 0/1/2.
+                // Never overwrite a saved user duration.
+                SharedPreferences durationPrefs = app.getSharedPreferences("v2f_duration_entry", Context.MODE_PRIVATE);
+                if (!durationPrefs.contains("value0") && !durationPrefs.contains("value1")
+                        && !durationPrefs.contains("value2")) {
+                    durationPrefs.edit().putInt("value0", 0)
+                            .putInt("value1", 0).putInt("value2", 3).commit();
                 }
                 SharedPreferences sitePrefs = app.getSharedPreferences("v1f_blocked_sites", Context.MODE_PRIVATE);
                 if (!sitePrefs.contains("domains")) {

@@ -11,7 +11,7 @@ import java.lang.reflect.Method;
 /** Session-bound block in the final minutes of each local clock hour. */
 public final class RandomFullBlock {
     private static final long HOUR = 3600000L;
-    private static final int DEFAULT_MINUTES = 15;
+    private static final int DEFAULT_MINUTES = 1;
     private static final String PREFS = "vx_random_full_block";
     private static final String KEY_MINUTES = "window_minutes";
     private static android.os.Handler pollHandler;
