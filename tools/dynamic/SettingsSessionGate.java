@@ -8,7 +8,7 @@ import java.util.Set;
 public final class SettingsSessionGate {
     private SettingsSessionGate() {}
 
-    public static boolean isActive() {
+    public static boolean isSessionRunning() {
         try {
             Class<?> graphClass = Class.forName("com.v1f.app.AppGraph");
             Object graph = graphClass.getField("INSTANCE").get(null);
@@ -22,6 +22,11 @@ public final class SettingsSessionGate {
         } catch (Throwable ignored) {
             return false; // Never enable Settings interception without a verified session.
         }
+    }
+
+    /** A break suspends every Settings guard, even while the session clock runs. */
+    public static boolean isActive() {
+        return BreakPauseRules.protectionEnabled(isSessionRunning(), StrictBlockPolicy.allowsAll());
     }
 
     public static Set<String> blockedLabelsSnapshot() {
