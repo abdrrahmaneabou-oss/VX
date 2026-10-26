@@ -17,6 +17,7 @@ fi
 
 java -jar "$APKTOOL" d -f "$BASE_APK" -o "$ROOT"
 python3 tools/inspect_block_state.py "$ROOT"
+python3 tools/inspect_mini_window.py "$ROOT"
 # Diagnostic only; this script does not alter strict-block state.
 # Updated hourly scheduler integration with configurable 1-45 minute window.
 # Seed user-editable app and website defaults on first installation only.
