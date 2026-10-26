@@ -130,7 +130,7 @@ def main(root):
         ".end method\n"
     )
     path.write_text(source)
-    print("Full scheduled-break barrier installed: app/site/deferred/Settings/Mini/LockActivity")
+    print("Full scheduled-break barrier installed: app/site/deferred/Settings/LockActivity")
 
 
 if __name__ == "__main__":

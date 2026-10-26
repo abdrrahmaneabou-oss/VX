@@ -36,7 +36,6 @@ python3 tools/patch_accessibility_only.py "$ROOT"
 python3 tools/patch_random_full_block.py "$ROOT"
 python3 tools/patch_default_selections.py "$ROOT"
 python3 tools/patch_guardbridge_grace.py "$ROOT"
-python3 tools/patch_mini_window.py "$ROOT"
 python3 tools/patch_break_pause.py "$ROOT"
 python3 tools/verify_home_navigation.py "$ROOT"
 bash tools/build_dynamic_dex.sh

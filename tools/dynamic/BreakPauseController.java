@@ -10,8 +10,7 @@ import java.lang.ref.WeakReference;
 
 /**
  * One central pause barrier for the original protection engine and all V2F
- * additions. During the scheduled break no lock, Settings recovery, or Mini
- * relaunch may run. Polling also removes an ALREADY-visible lock/shield.
+ * additions. During the scheduled break no lock or Settings recovery may run. Polling also removes an ALREADY-visible lock/shield.
  */
 public final class BreakPauseController {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -45,7 +44,6 @@ public final class BreakPauseController {
         wasBreak = true;
         // Cancel in-flight callbacks too, not only newly-arriving block events.
         SettingsBackCoordinator.cancel();
-        MiniWindowLockCoordinator.detach();
         closeVisibleLock();
     }
 
@@ -71,7 +69,6 @@ public final class BreakPauseController {
                     wasBreak = false;
                     if (SettingsSessionGate.isActive()) {
                         SettingsExitMonitor.initialize(current);
-                        MiniWindowLockCoordinator.attach(current);
                         // The foreground app/site can still be open when a break
                         // ends. Re-evaluate without waiting for user interaction.
                         MAIN.postDelayed(() -> recheckForeground(current, token), 150L);
