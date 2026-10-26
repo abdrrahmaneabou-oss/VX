@@ -7,6 +7,7 @@ ROOT="build/decompiled"
 APKTOOL="build/tools/apktool.jar"
 bash tools/test_full_block.sh
 bash tools/test_settings_return_state.sh
+python3 tools/test_settings_bottom_strip.py
 
 rm -rf "$ROOT" build/dynamic-dex build/dynamic-classes
 mkdir -p build/tools
