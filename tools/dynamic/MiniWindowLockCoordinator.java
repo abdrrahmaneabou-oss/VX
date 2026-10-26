@@ -75,9 +75,8 @@ public final class MiniWindowLockCoordinator {
         if (replay != null && target.equals(pendingPackage)
                 && equal(domain, pendingDomain)) return true;
         if (Looper.myLooper() != Looper.getMainLooper()) return false;
-        // Normal full-screen blocking must retain the original immediate path.
-        // Only OEM Mini windows need a new foreground launch before LockActivity.
-        if (!hasMiniWindow(service, target)) return false;
+        // All blocked app and website decisions relaunch their target package,
+        // regardless of whether Android reports a Mini or full-screen window.
         // Ignore our own launch events while the phone is switching task modes.
         // The scheduled replay already delivers the actual lock.
         if (SystemClock.elapsedRealtime() - lastLaunchAt < RETRY_SPACING_MS) return true;
