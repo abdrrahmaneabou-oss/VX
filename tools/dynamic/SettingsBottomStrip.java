@@ -96,10 +96,11 @@ public final class SettingsBottomStrip {
         try {
             Point size = new Point();
             manager.getDefaultDisplay().getRealSize(size);
+            int width = Math.max(1, Math.round(size.x * 0.65f));
             int height = Math.max(1, Math.round(size.y * 0.05f));
             if (strip != null) {
-                if (params.width != size.x || params.height != height) {
-                    params.width = size.x;
+                if (params.width != width || params.height != height) {
+                    params.width = width;
                     params.height = height;
                     manager.updateViewLayout(strip, params);
                 }
@@ -112,14 +113,14 @@ public final class SettingsBottomStrip {
             view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             view.setOnTouchListener((v, event) -> true);
             WindowManager.LayoutParams layout = new WindowManager.LayoutParams(
-                    size.x, height,
+                    width, height,
                     WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                             | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                             | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT);
-            layout.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+            layout.gravity = Gravity.BOTTOM | Gravity.LEFT;
             layout.x = 0;
             layout.y = 0;
             layout.alpha = 1f;
