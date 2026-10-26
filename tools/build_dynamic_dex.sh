@@ -12,6 +12,10 @@ mkdir -p build/settings-exit-tests
 javac -d build/settings-exit-tests tools/dynamic/SettingsExitState.java tools/tests/SettingsExitStateTest.java
 java -cp build/settings-exit-tests SettingsExitStateTest
 
+mkdir -p build/mini-window-tests
+javac -d build/mini-window-tests tools/dynamic/MiniWindowRules.java tools/tests/MiniWindowRulesTest.java
+java -cp build/mini-window-tests MiniWindowRulesTest
+
 rm -rf build/dynamic-classes build/dynamic-dex
 mkdir -p build/dynamic-classes build/dynamic-dex
 
@@ -34,6 +38,8 @@ javac -source 8 -target 8 \
   tools/dynamic/HomeCardState.java \
   tools/dynamic/RobustSettingsGuard.java \
   tools/dynamic/SettingsSessionGate.java \
+  tools/dynamic/MiniWindowRules.java \
+  tools/dynamic/MiniWindowLockCoordinator.java \
   tools/dynamic/stubs/com/v1f/app/protection/overlay/MeteorShieldOverlay.java \
   tools/dynamic/SettingsExitMonitor.java \
   tools/dynamic/SettingsExitState.java \
