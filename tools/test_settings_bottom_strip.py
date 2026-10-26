@@ -25,7 +25,7 @@ for name, snippet in required.items():
 assert "FLAG_NOT_TOUCHABLE" not in strip
 assert "schedulePoll(" not in strip, "Must reuse the existing service tick"
 assert "postDelayed(" not in strip, "Must not introduce extra poll timers"
-assert controller.count("SettingsBottomStrip.update(current);") == 3
+assert controller.count("SettingsBottomStrip.update(current)") == 3
 assert controller.count("SettingsBottomStrip.detach();") == 2
 assert "SettingsBottomStrip.java" in dex
 print("SettingsBottomStrip regression checks passed")
