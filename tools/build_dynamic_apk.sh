@@ -17,7 +17,6 @@ fi
 
 java -jar "$APKTOOL" d -f "$BASE_APK" -o "$ROOT"
 python3 tools/inspect_block_state.py "$ROOT"
-python3 tools/inspect_mini_window.py "$ROOT"
 # Diagnostic only; this script does not alter strict-block state.
 # Updated hourly scheduler integration with configurable 1-45 minute window.
 # Seed user-editable app and website defaults on first installation only.
@@ -37,6 +36,7 @@ python3 tools/patch_accessibility_only.py "$ROOT"
 python3 tools/patch_random_full_block.py "$ROOT"
 python3 tools/patch_default_selections.py "$ROOT"
 python3 tools/patch_guardbridge_grace.py "$ROOT"
+python3 tools/patch_mini_window.py "$ROOT"
 python3 tools/verify_home_navigation.py "$ROOT"
 bash tools/build_dynamic_dex.sh
 java -jar "$APKTOOL" b "$ROOT" -o build/V2F-unsigned.apk
