@@ -85,7 +85,11 @@ public final class SettingsBottomStrip {
     }
 
     private static void refresh() {
-        if (manager == null || !SettingsSessionGate.isActive() || !settingsForeground()) {
+        if (manager == null || !SettingsSessionGate.isActive()) {
+            hide();
+            return;
+        }
+        if (!settingsForeground()) {
             hide();
             return;
         }
